@@ -3,5 +3,5 @@
 ## Run
 
 ```bash
->$ g++ main.cpp -o /tmp/chess2025 && /tmp/chess2025
+>$ g++ main.cpp -std=c++14 -o /tmp/chess2025 && /tmp/chess2025
 ```
