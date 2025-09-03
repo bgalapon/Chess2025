@@ -28,6 +28,7 @@ public:
     std::string toString() const {
         return "TODO";
     }
+
 private:
     uint64_t blackBishops;
     uint64_t blackKing;
@@ -53,27 +54,28 @@ private:
 
 class BoardBuilder {
 public:
-    BoardBuilder() : board(std::make_unique<Board>()) {}
+    BoardBuilder(uint64_t blackKingSquare, uint64_t whiteKingSquare) : board(std::make_unique<Board>()) {
+        board->setBlackKing(blackKingSquare);
+        board->setWhiteKing(whiteKingSquare);
+    }
 
-    BoardBuilder& setBlackBishops(uint64_t blackBishops) { board->setBlackBishops(blackBishops); return *this;}
-    BoardBuilder& setBlackKing(uint64_t blackKing) { board->setBlackKing(blackKing); return *this;}
-    BoardBuilder& setBlackKnights(uint64_t blackKnights) { board->setBlackKnights(blackKnights); return *this;}
-    BoardBuilder& setBlackPawns(uint64_t blackPawns) { board->setBlackPawns(blackPawns); return *this;}
-    BoardBuilder& setBlackQueens(uint64_t blackQueens) { board->setBlackQueens(blackQueens); return *this;}
-    BoardBuilder& setBlackRooks(uint64_t blackRooks) { board->setBlackRooks(blackRooks); return *this;}
+    BoardBuilder& setBlackBishops(uint64_t squares) { board->setBlackBishops(squares); return *this;}
+    BoardBuilder& setBlackKnights(uint64_t squares) { board->setBlackKnights(squares); return *this;}
+    BoardBuilder& setBlackPawns(uint64_t squares) { board->setBlackPawns(squares); return *this;}
+    BoardBuilder& setBlackQueens(uint64_t squares) { board->setBlackQueens(squares); return *this;}
+    BoardBuilder& setBlackRooks(uint64_t squares) { board->setBlackRooks(squares); return *this;}
 
-    BoardBuilder& setWhiteBishops(uint64_t whiteBishops) { board->setWhiteBishops(whiteBishops); return *this;}
-    BoardBuilder& setWhiteKing(uint64_t whiteKing) { board->setWhiteKing(whiteKing); return *this;}
-    BoardBuilder& setWhiteKnights(uint64_t whiteKnights) { board->setWhiteKnights(whiteKnights); return *this;}
-    BoardBuilder& setWhitePawns(uint64_t whitePawns) { board->setWhitePawns(whitePawns); return *this;}
-    BoardBuilder& setWhiteQueens(uint64_t whiteQueens) { board->setWhiteQueens(whiteQueens); return *this;}
-    BoardBuilder& setWhiteRooks(uint64_t whiteRooks) { board->setWhiteRooks(whiteRooks); return *this;}
+    BoardBuilder& setWhiteBishops(uint64_t squares) { board->setWhiteBishops(squares); return *this;}
+    BoardBuilder& setWhiteKnights(uint64_t squares) { board->setWhiteKnights(squares); return *this;}
+    BoardBuilder& setWhitePawns(uint64_t squares) { board->setWhitePawns(squares); return *this;}
+    BoardBuilder& setWhiteQueens(uint64_t squares) { board->setWhiteQueens(squares); return *this;}
+    BoardBuilder& setWhiteRooks(uint64_t squares) { board->setWhiteRooks(squares); return *this;}
 
     BoardBuilder& setBlackCastleKingside(bool canCastle) { board->setBlackCastleKingside(canCastle); return *this; }
     BoardBuilder& setBlackCastleQueenside(bool canCastle) { board->setBlackCastleQueenside(canCastle); return *this; }
     BoardBuilder& setWhiteCastleKingside(bool canCastle) { board->setWhiteCastleKingside(canCastle); return *this; }
     BoardBuilder& setWhiteCastleQueenside(bool canCastle) { board->setWhiteCastleQueenside(canCastle); return *this; }
-    
+
     BoardBuilder& setEnPassent(uint64_t enPassent) { board->setEnPassent(enPassent); return *this; }
 
     std::unique_ptr<Board> Build() { return std::move(board); }
@@ -83,7 +85,7 @@ private:
 };
 
 int main() {
-    BoardBuilder boardBuilder;
+    BoardBuilder boardBuilder = BoardBuilder(0, 0);
     std::unique_ptr<Board> board = boardBuilder
         .setBlackBishops(10)
         .Build();
