@@ -26,7 +26,33 @@ public:
     void setEnPassent(uint64_t square) { this->enPassent = square; }
 
     std::string toString() const {
-        return "TODO";
+        std::string result = "";
+        for (int rank = 7; rank >= 0; --rank) { // Iterate ranks from 8 to 1
+            for (int file = 0; file < 8; ++file) { // Iterate files from A to H
+                uint64_t square_bit = 1ULL << (rank * 8 + file);
+                
+                char piece_char = '.'; // Default for an empty square
+
+                // Check for each piece type
+                if ((blackRooks & square_bit) != 0) piece_char = 'r';
+                else if ((blackKnights & square_bit) != 0) piece_char = 'n';
+                else if ((blackBishops & square_bit) != 0) piece_char = 'b';
+                else if ((blackQueens & square_bit) != 0) piece_char = 'q';
+                else if ((blackKing & square_bit) != 0) piece_char = 'k';
+                else if ((blackPawns & square_bit) != 0) piece_char = 'p';
+                
+                else if ((whiteRooks & square_bit) != 0) piece_char = 'R';
+                else if ((whiteKnights & square_bit) != 0) piece_char = 'N';
+                else if ((whiteBishops & square_bit) != 0) piece_char = 'B';
+                else if ((whiteQueens & square_bit) != 0) piece_char = 'Q';
+                else if ((whiteKing & square_bit) != 0) piece_char = 'K';
+                else if ((whitePawns & square_bit) != 0) piece_char = 'P';
+
+                result += piece_char;
+            }
+            result += '\n'; // Add a newline after each rank
+        }
+        return result;
     }
 
 private:
@@ -85,7 +111,7 @@ private:
 };
 
 int main() {
-    BoardBuilder boardBuilder = BoardBuilder(0, 0);
+    BoardBuilder boardBuilder = BoardBuilder(1, 128);
     std::unique_ptr<Board> board = boardBuilder
         .setBlackBishops(10)
         .Build();
