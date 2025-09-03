@@ -2,6 +2,17 @@
 #include <memory>
 #include <string>
 
+enum class Square : uint64_t {
+    A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
+    A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
+    A3 = 1ULL << 16, B3 = 1ULL << 17, C3 = 1ULL << 18, D3 = 1ULL << 19, E3 = 1ULL << 20, F3 = 1ULL << 21, G3 = 1ULL << 22, H3 = 1ULL << 23,
+    A4 = 1ULL << 24, B4 = 1ULL << 25, C4 = 1ULL << 26, D4 = 1ULL << 27, E4 = 1ULL << 28, F4 = 1ULL << 29, G4 = 1ULL << 30, H4 = 1ULL << 31,
+    A5 = 1ULL << 32, B5 = 1ULL << 33, C5 = 1ULL << 34, D5 = 1ULL << 35, E5 = 1ULL << 36, F5 = 1ULL << 37, G5 = 1ULL << 38, H5 = 1ULL << 39,
+    A6 = 1ULL << 40, B6 = 1ULL << 41, C6 = 1ULL << 42, D6 = 1ULL << 43, E6 = 1ULL << 44, F6 = 1ULL << 45, G6 = 1ULL << 46, H6 = 1ULL << 47,
+    A7 = 1ULL << 48, B7 = 1ULL << 49, C7 = 1ULL << 50, D7 = 1ULL << 51, E7 = 1ULL << 52, F7 = 1ULL << 53, G7 = 1ULL << 54, H7 = 1ULL << 55,
+    A8 = 1ULL << 56, B8 = 1ULL << 57, C8 = 1ULL << 58, D8 = 1ULL << 59, E8 = 1ULL << 60, F8 = 1ULL << 61, G8 = 1ULL << 62, H8 = 1ULL << 63
+};
+
 class Board {
 public:
     void setBlackBishops(uint64_t squares) { this->blackBishops = squares; }
@@ -80,9 +91,9 @@ private:
 
 class BoardBuilder {
 public:
-    BoardBuilder(uint64_t blackKingSquare, uint64_t whiteKingSquare) : board(std::make_unique<Board>()) {
-        board->setBlackKing(blackKingSquare);
-        board->setWhiteKing(whiteKingSquare);
+    BoardBuilder(Square blackKingSquare, Square whiteKingSquare) : board(std::make_unique<Board>()) {
+        board->setBlackKing(static_cast<uint64_t>(blackKingSquare));
+        board->setWhiteKing(static_cast<uint64_t>(whiteKingSquare));
     }
 
     BoardBuilder& setBlackBishops(uint64_t squares) { board->setBlackBishops(squares); return *this;}
@@ -111,7 +122,7 @@ private:
 };
 
 int main() {
-    BoardBuilder boardBuilder = BoardBuilder(1, 128);
+    BoardBuilder boardBuilder = BoardBuilder(Square::A1, Square::B4);
     std::unique_ptr<Board> board = boardBuilder
         .setBlackBishops(10)
         .Build();
