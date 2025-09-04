@@ -7,23 +7,6 @@ enum class Color {
     BLACK
 };
 
-// Bitboard masks for ranks for efficient checking
-const uint64_t RANK_2 = 0x000000000000FF00ULL;
-const uint64_t RANK_4 = 0x0000000000FF0000ULL;
-const uint64_t RANK_5 = 0x0000FF0000000000ULL;
-const uint64_t RANK_7 = 0x00FF000000000000ULL;
-
-const uint64_t WHITE_KINGSIDE_CASTLE_PATH = 96ULL;
-const uint64_t WHITE_QUEENSIDE_CASTLE_PATH = 14ULL;
-const uint64_t BLACK_KINGSIDE_CASTLE_PATH = 6917529027641081856ULL;
-const uint64_t BLACK_QUEENSIDE_CASTLE_PATH = 1008806316530991104ULL;
-
-// Helper function to get the index (0-63) from a single-bit bitboard
-inline uint8_t getSquareIndex(uint64_t bitboard) {
-    if (bitboard == 0) return 64; // Sentinel value for invalid square
-    return __builtin_ctzll(bitboard);
-}
-
 enum class Square : uint64_t {
     A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
     A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
@@ -35,8 +18,47 @@ enum class Square : uint64_t {
     A8 = 1ULL << 56, B8 = 1ULL << 57, C8 = 1ULL << 58, D8 = 1ULL << 59, E8 = 1ULL << 60, F8 = 1ULL << 61, G8 = 1ULL << 62, H8 = 1ULL << 63
 };
 
+// Bitboard masks for ranks for efficient checking
+const uint64_t RANK_2 = 0x000000000000FF00ULL;
+const uint64_t RANK_4 = 0x0000000000FF0000ULL;
+const uint64_t RANK_5 = 0x0000FF0000000000ULL;
+const uint64_t RANK_7 = 0x00FF000000000000ULL;
+
+// Bitboard masks for castling paths
+const uint64_t WHITE_KINGSIDE_CASTLE_PATH = 96ULL;
+const uint64_t WHITE_QUEENSIDE_CASTLE_PATH = 14ULL;
+const uint64_t BLACK_KINGSIDE_CASTLE_PATH = 6917529027641081856ULL;
+const uint64_t BLACK_QUEENSIDE_CASTLE_PATH = 1008806316530991104ULL;
+
+// Precomputed file masks
+const uint64_t file_masks[8] = {
+    0x0101010101010101ULL, // File A
+    0x0202020202020202ULL, // File B
+    0x0404040404040404ULL, // File C
+    0x0808080808080808ULL, // File D
+    0x1010101010101010ULL, // File E
+    0x2020202020202020ULL, // File F
+    0x4040404040404040ULL, // File G
+    0x8080808080808080ULL  // File H
+};
+
+// Helper function to get the index (0-63) from a single-bit bitboard
+inline uint8_t getSquareIndex(uint64_t bitboard) {
+    if (bitboard == 0) return 64; // Sentinel value for invalid square
+    return __builtin_ctzll(bitboard);
+}
+
 class Board {
 public:
+    // Copy constructor for creating temporary board states
+    Board(const Board& other) = default;
+
+    // Default constructor to allow for a new Board instance
+    Board() : blackBishops(0), blackKing(0), blackKnights(0), blackPawns(0), blackQueens(0), blackRooks(0),
+              whiteBishops(0), whiteKing(0), whiteKnights(0), whitePawns(0), whiteQueens(0), whiteRooks(0),
+              blackCastleKingside(false), blackCastleQueenside(false), whiteCastleKingside(false), whiteCastleQueenside(false),
+              enPassent(0), sideToMove(Color::WHITE) {}
+
     void setBlackBishops(uint64_t squares) { this->blackBishops = squares; }
     void setBlackKing(uint64_t square) { this->blackKing = square; }
     void setBlackKnights(uint64_t squares) { this->blackKnights = squares; }
@@ -89,7 +111,229 @@ public:
         }
         return result;
     }
+    
+    // Function to handle the actual move logic on the bitboards
+    bool applyMove(Square start, Square end) {
+        uint64_t start_bit = static_cast<uint64_t>(start);
+        uint64_t end_bit = static_cast<uint64_t>(end);
+        
+        // Get bitboards for friendly and enemy pieces for efficiency
+        uint64_t friendlyPieces, enemyPieces, allPieces;
+        if (this->sideToMove == Color::WHITE) {
+            friendlyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+            enemyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+        } else {
+            friendlyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+            enemyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+        }
+        allPieces = friendlyPieces | enemyPieces;
 
+        // --- Handle Castling Moves First ---
+        if (this->sideToMove == Color::WHITE) {
+            // White King-side castling
+            if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & WHITE_KINGSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    whiteKing = static_cast<uint64_t>(Square::G1);
+                    whiteRooks &= ~static_cast<uint64_t>(Square::H1);
+                    whiteRooks |= static_cast<uint64_t>(Square::F1);
+                    return true;
+                }
+            }
+            // White Queen-side castling
+            else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
+                // Check if squares between king and rook are empty
+                    if (!((friendlyPieces | enemyPieces) & WHITE_QUEENSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    whiteKing = static_cast<uint64_t>(Square::C1);
+                    whiteRooks &= ~static_cast<uint64_t>(Square::A1);
+                    whiteRooks |= static_cast<uint64_t>(Square::D1);
+                    return true;
+                }
+            }
+        } else { // sideToMove == Color::BLACK
+            // Black King-side castling
+            if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & BLACK_KINGSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    blackKing = static_cast<uint64_t>(Square::G8);
+                    blackRooks &= ~static_cast<uint64_t>(Square::H8);
+                    blackRooks |= static_cast<uint64_t>(Square::F8);
+                    return true;
+                }
+            }
+            // Black Queen-side castling
+            else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & BLACK_QUEENSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    blackKing = static_cast<uint64_t>(Square::C8);
+                    blackRooks &= ~static_cast<uint64_t>(Square::A8);
+                    blackRooks |= static_cast<uint64_t>(Square::D8);
+                    return true;
+                }
+            }
+        }
+
+        // Check if a piece of the current side exists at the start square
+        if ((friendlyPieces & start_bit) == 0) {
+            return false;
+        }
+
+        // Check if the destination square is occupied by a friendly piece
+        if ((friendlyPieces & end_bit) != 0) {
+            return false;
+        }
+
+        // Get start and end square indices for validation
+        uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+        uint8_t start_file = getSquareIndex(start_bit) & 7;
+        uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+        uint8_t end_file = getSquareIndex(end_bit) & 7;
+        
+        bool isPawnDoubleStep = false;
+        
+        // Piece-specific move validation and execution
+        if ((whitePawns & start_bit) || (blackPawns & start_bit)) {
+            if (this->sideToMove == Color::WHITE) {
+                if (end_bit == (start_bit << 8) && (allPieces & end_bit) == 0) {
+                    // Valid single step forward
+                } else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
+                    isPawnDoubleStep = true;
+                } else if ((end_bit == (start_bit << 7) || end_bit == (start_bit << 9)) && (enemyPieces & end_bit)) {
+                    // Valid capture
+                } else if (end_bit == this->enPassent) {
+                    uint64_t capturedPawnSquare = end_bit >> 8;
+                    blackPawns &= ~capturedPawnSquare;
+                } else {
+                    return false;
+                }
+                whitePawns &= ~start_bit;
+                whitePawns |= end_bit;
+            } else { // Black pawn
+                if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {
+                    // Valid single step forward
+                } else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) {
+                    isPawnDoubleStep = true;
+                } else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {
+                    // Valid capture
+                } else if (end_bit == this->enPassent) {
+                    uint64_t capturedPawnSquare = end_bit << 8;
+                    whitePawns &= ~capturedPawnSquare;
+                } else {
+                    return false;
+                }
+                blackPawns &= ~start_bit;
+                blackPawns |= end_bit;
+            }
+        }
+        else if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
+            int rank_diff = std::abs(start_rank - end_rank);
+            int file_diff = std::abs(start_file - end_file);
+            if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) {
+                return false;
+            }
+            if (whiteKnights & start_bit) {
+                whiteKnights &= ~start_bit;
+                whiteKnights |= end_bit;
+            } else {
+                blackKnights &= ~start_bit;
+                blackKnights |= end_bit;
+            }
+        }
+        else if ((whiteBishops & start_bit) || (blackBishops & start_bit)) {
+            if (std::abs(start_rank - end_rank) != std::abs(start_file - end_file) || !isPathClear(start_bit, end_bit, allPieces)) {
+                return false;
+            }
+            if (whiteBishops & start_bit) {
+                whiteBishops &= ~start_bit;
+                whiteBishops |= end_bit;
+            } else {
+                blackBishops &= ~start_bit;
+                blackBishops |= end_bit;
+            }
+        }
+        else if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
+            bool isStraight = (start_rank == end_rank) || (start_file == end_file);
+            if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) {
+                return false;
+            }
+            if (whiteRooks & start_bit) {
+                whiteRooks &= ~start_bit;
+                whiteRooks |= end_bit;
+                if (start == Square::A1) whiteCastleQueenside = false;
+                if (start == Square::H1) whiteCastleKingside = false;
+            } else {
+                blackRooks &= ~start_bit;
+                blackRooks |= end_bit;
+                if (start == Square::A8) blackCastleQueenside = false;
+                if (start == Square::H8) blackCastleKingside = false;
+            }
+        }
+        else if ((whiteQueens & start_bit) || (blackQueens & start_bit)) {
+            bool isHorizontal = start_rank == end_rank;
+            bool isVertical = start_file == end_file;
+            bool isDiagonal = std::abs(start_rank - end_rank) == std::abs(start_file - end_file);
+            if ((!isHorizontal && !isVertical && !isDiagonal) || !isPathClear(start_bit, end_bit, allPieces)) {
+                return false;
+            }
+            if (whiteQueens & start_bit) {
+                whiteQueens &= ~start_bit;
+                whiteQueens |= end_bit;
+            } else {
+                blackQueens &= ~start_bit;
+                blackQueens |= end_bit;
+            }
+        }
+        else if ((whiteKing & start_bit) || (blackKing & start_bit)) {
+            int rank_diff = std::abs(start_rank - end_rank);
+            int file_diff = std::abs(start_file - end_file);
+            if (rank_diff > 1 || file_diff > 1) {
+                return false;
+            }
+            if (whiteKing & start_bit) {
+                whiteKing &= ~start_bit;
+                whiteKing |= end_bit;
+                whiteCastleKingside = false;
+                whiteCastleQueenside = false;
+            } else {
+                blackKing &= ~start_bit;
+                blackKing |= end_bit;
+                blackCastleKingside = false;
+                blackCastleQueenside = false;
+            }
+        } else {
+            return false;
+        }
+
+        // Handle regular captures by clearing the destination bit from enemy pieces
+        if (this->sideToMove == Color::WHITE) {
+            blackPawns &= ~end_bit;
+            blackKnights &= ~end_bit;
+            blackBishops &= ~end_bit;
+            blackRooks &= ~end_bit;
+            blackQueens &= ~end_bit;
+            blackKing &= ~end_bit;
+        } else { // sideToMove == Color::BLACK
+            whitePawns &= ~end_bit;
+            whiteKnights &= ~end_bit;
+            whiteBishops &= ~end_bit;
+            whiteRooks &= ~end_bit;
+            whiteQueens &= ~end_bit;
+            whiteKing &= ~end_bit;
+        }
+        
+        // Handle en passant flag reset
+        if (!isPawnDoubleStep) {
+            this->enPassent = 0;
+        }
+
+        return true;
+    }
+    
+    // Function to check if a path between two squares is clear of pieces
     bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces) {
         uint8_t start_index = getSquareIndex(start_bit);
         uint8_t end_index = getSquareIndex(end_bit);
@@ -135,82 +379,141 @@ public:
         
         return false;
     }
-
-    // move performs a move and returns a bool indicating if the move was successful
-    bool move(Square start, Square end) {
-        uint64_t start_bit = static_cast<uint64_t>(start);
-        uint64_t end_bit = static_cast<uint64_t>(end);
-        
-        bool isPawnDoubleStep = false;
-        bool isCastlingMove = false;
-
-        // Get bitboards for friendly and enemy pieces for efficiency
-        uint64_t friendlyPieces, enemyPieces, allPieces;
-        if (this->sideToMove == Color::WHITE) {
-            friendlyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
-            enemyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+    
+    // Helper function to get all attacked squares by a specific piece type
+    uint64_t getPawnAttacks(Color side, uint64_t pawns) {
+        if (side == Color::WHITE) {
+            return (pawns << 7) & ~file_masks[7] | (pawns << 9) & ~file_masks[0];
         } else {
-            friendlyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
-            enemyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+            return (pawns >> 7) & ~file_masks[0] | (pawns >> 9) & ~file_masks[7];
         }
-        allPieces = friendlyPieces | enemyPieces;
+    }
+
+    uint64_t getKnightAttacks(uint64_t knights) {
+        uint64_t attacks = 0;
+        uint64_t knight = knights;
+        while(knight) {
+            uint64_t single_knight = knight & -knight;
+            uint64_t target_attacks = 0;
+            if (single_knight & ~file_masks[0] & ~file_masks[1]) target_attacks |= (single_knight << 6) | (single_knight >> 10);
+            if (single_knight & ~file_masks[0]) target_attacks |= (single_knight << 15) | (single_knight >> 17);
+            if (single_knight & ~file_masks[7] & ~file_masks[6]) target_attacks |= (single_knight << 10) | (single_knight >> 6);
+            if (single_knight & ~file_masks[7]) target_attacks |= (single_knight << 17) | (single_knight >> 15);
+            attacks |= target_attacks;
+            knight &= knight - 1;
+        }
+        return attacks;
+    }
+
+    uint64_t getKingAttacks(uint64_t king) {
+        uint64_t attacks = 0;
+        uint64_t one = 1ULL;
+        uint64_t right = (king << 1) & ~file_masks[0];
+        uint64_t left = (king >> 1) & ~file_masks[7];
+        uint64_t up = king << 8;
+        uint64_t down = king >> 8;
+        uint64_t up_right = (king << 9) & ~file_masks[0];
+        uint64_t up_left = (king << 7) & ~file_masks[7];
+        uint64_t down_right = (king >> 7) & ~file_masks[0];
+        uint64_t down_left = (king >> 9) & ~file_masks[7];
+        attacks = right | left | up | down | up_right | up_left | down_right | down_left;
+        return attacks;
+    }
+
+    uint64_t getSlidingAttacks(uint64_t pieces, uint64_t allPieces, bool isRook) {
+        uint64_t attacks = 0;
+        while (pieces) {
+            uint64_t single_piece = pieces & -pieces;
+            uint64_t occupied = allPieces;
+
+            // Define directional shifts
+            int shifts[] = { -1, 1, -8, 8 }; // Left, Right, Down, Up
+            if (!isRook) {
+                shifts[0] = -9; // Down-Left
+                shifts[1] = -7; // Down-Right
+                shifts[2] = 7;  // Up-Left
+                shifts[3] = 9;  // Up-Right
+            }
+
+            for (int shift : shifts) {
+                uint64_t temp_attacks = 0;
+                uint64_t current_square = single_piece;
+                bool is_diagonal = (shift == 7 || shift == -7 || shift == 9 || shift == -9);
+                bool is_left_move = (shift == -1 || shift == -9 || shift == 7);
+                bool is_right_move = (shift == 1 || shift == 9 || shift == -7);
+
+                // Loop until we hit the edge of the board or an occupied piece
+                while (true) {
+                    uint64_t next_square = (shift > 0) ? (current_square << std::abs(shift)) : (current_square >> std::abs(shift));
+
+                    if (next_square == 0 || (is_left_move && (next_square & file_masks[7])) || (is_right_move && (next_square & file_masks[0]))) {
+                        break;
+                    }
+                    if (is_diagonal) {
+                        int current_rank = getSquareIndex(current_square) >> 3;
+                        int next_rank = getSquareIndex(next_square) >> 3;
+                        if (std::abs(current_rank - next_rank) != 1) {
+                            break;
+                        }
+                    }
+
+                    temp_attacks |= next_square;
+                    current_square = next_square;
+
+                    if (occupied & next_square) {
+                        break;
+                    }
+                }
+                attacks |= temp_attacks;
+            }
+            pieces &= pieces - 1; // Clear the least significant bit
+        }
+        return attacks;
+    }
+    
+    // Checks if the king of the given color is in check
+    bool isKingInCheck(Color kingColor) {
+        uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
         
-        // --- Handle Castling Moves First ---
-        if (this->sideToMove == Color::WHITE) {
-            // White King-side castling
-            if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
-                // Check if squares between king and rook are empty
-                if (!((friendlyPieces | enemyPieces) & WHITE_KINGSIDE_CASTLE_PATH)) {
-                    // Move the king and rook
-                    whiteKing = static_cast<uint64_t>(Square::G1);
-                    whiteRooks &= ~static_cast<uint64_t>(Square::H1);
-                    whiteRooks |= static_cast<uint64_t>(Square::F1);
-                    isCastlingMove = true;
-                }
-            }
-            // White Queen-side castling
-            else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
-                // Check if squares between king and rook are empty
-                if (!((friendlyPieces | enemyPieces) & WHITE_QUEENSIDE_CASTLE_PATH)) {
-                    // Move the king and rook
-                    whiteKing = static_cast<uint64_t>(Square::C1);
-                    whiteRooks &= ~static_cast<uint64_t>(Square::A1);
-                    whiteRooks |= static_cast<uint64_t>(Square::D1);
-                    isCastlingMove = true;
-                }
-            }
-        } else { // sideToMove == Color::BLACK
-            // Black King-side castling
-            if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
-                // Check if squares between king and rook are empty
-                if (!((friendlyPieces | enemyPieces) & BLACK_KINGSIDE_CASTLE_PATH)) {
-                    // Move the king and rook
-                    blackKing = static_cast<uint64_t>(Square::G8);
-                    blackRooks &= ~static_cast<uint64_t>(Square::H8);
-                    blackRooks |= static_cast<uint64_t>(Square::F8);
-                    isCastlingMove = true;
-                }
-            }
-            // Black Queen-side castling
-            else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
-                // Check if squares between king and rook are empty
-                if (!((friendlyPieces | enemyPieces) & BLACK_QUEENSIDE_CASTLE_PATH)) {
-                    // Move the king and rook
-                    blackKing = static_cast<uint64_t>(Square::C8);
-                    blackRooks &= ~static_cast<uint64_t>(Square::A8);
-                    blackRooks |= static_cast<uint64_t>(Square::D8);
-                    isCastlingMove = true;
-                }
-            }
+        // Get opponent's piece bitboards
+        uint64_t opponentPawns = (kingColor == Color::WHITE) ? blackPawns : whitePawns;
+        uint64_t opponentKnights = (kingColor == Color::WHITE) ? blackKnights : whiteKnights;
+        uint64_t opponentBishops = (kingColor == Color::WHITE) ? blackBishops : whiteBishops;
+        uint64_t opponentRooks = (kingColor == Color::WHITE) ? blackRooks : whiteRooks;
+        uint64_t opponentQueens = (kingColor == Color::WHITE) ? blackQueens : whiteQueens;
+        
+        uint64_t allPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing |
+                             whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+        
+        uint64_t allOpponentAttacks = getPawnAttacks(kingColor, opponentPawns);
+        allOpponentAttacks |= getKnightAttacks(opponentKnights);
+        allOpponentAttacks |= getKingAttacks(opponentQueens); // Queens attack like a king in one step
+        allOpponentAttacks |= getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true);
+        allOpponentAttacks |= getSlidingAttacks(opponentBishops | opponentQueens, allPieces, false);
+        
+        return (kingSquare & allOpponentAttacks) != 0;
+    }
+
+    // New public `move` function that validates moves
+    bool move(Square start, Square end) {
+        // Create a temporary board to test the move
+        Board tempBoard = *this;
+
+        // Apply the move to the temporary board
+        if (!tempBoard.applyMove(start, end)) {
+            std::cerr << "Error: Invalid move based on piece rules or board state." << std::endl;
+            return false;
+        }
+        
+        // After the move is applied on the temporary board, check if the king is in check
+        if (tempBoard.isKingInCheck(this->sideToMove)) {
+            std::cerr << "Error: This move leaves the king in check. Move is illegal." << std::endl;
+            return false;
         }
 
-        // Exit early if a castling move was successfully executed
-        if (isCastlingMove) {
-            this->whiteCastleKingside = false;
-            this->whiteCastleQueenside = false;
-            this->blackCastleKingside = false;
-            this->blackCastleQueenside = false;
-            this->enPassent = 0;
+        // If the move is valid and doesn't leave the king in check, apply it to the main board
+        if (this->applyMove(start, end)) {
+            // Toggle side to move
             if (this->sideToMove == Color::WHITE) {
                 this->sideToMove = Color::BLACK;
             } else {
@@ -218,201 +521,8 @@ public:
             }
             return true;
         }
-
-        // --- Standard Move Logic (only if not a castling move) ---
-
-        // Check if a piece of the current side exists at the start square
-        if ((friendlyPieces & start_bit) == 0) {
-            std::cerr << "Error: No piece of the current side at the start square." << std::endl;
-            return false;
-        }
-
-        // Check if the destination square is occupied by a friendly piece
-        if ((friendlyPieces & end_bit) != 0) {
-            std::cerr << "Error: Cannot capture a friendly piece." << std::endl;
-            return false;
-        }
-
-        // Get start and end square indices for validation
-        uint8_t start_rank = getSquareIndex(start_bit) >> 3;
-        uint8_t start_file = getSquareIndex(start_bit) & 7;
-        uint8_t end_rank = getSquareIndex(end_bit) >> 3;
-        uint8_t end_file = getSquareIndex(end_bit) & 7;
         
-        // Piece-specific move validation
-        if ((whitePawns & start_bit) || (blackPawns & start_bit)) {
-            if (this->sideToMove == Color::WHITE) {
-                if (end_bit == (start_bit << 8) && (allPieces & end_bit) == 0) {
-                    // Valid single step forward
-                } else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
-                    isPawnDoubleStep = true;
-                } else if ((end_bit == (start_bit << 7) || end_bit == (start_bit << 9)) && (enemyPieces & end_bit)) {
-                    // Valid capture
-                } else if (end_bit == this->enPassent) {
-                    // Valid en passant
-                } else {
-                    std::cerr << "Error: Invalid white pawn move." << std::endl;
-                    return false;
-                }
-            } else { // Black pawn
-                if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {
-                    // Valid single step forward
-                } else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) {
-                    isPawnDoubleStep = true;
-                } else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {
-                    // Valid capture
-                } else if (end_bit == this->enPassent) {
-                    // Valid en passant
-                } else {
-                    std::cerr << "Error: Invalid black pawn move." << std::endl;
-                    return false;
-                }
-            }
-        }
-        else if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
-            int rank_diff = std::abs(start_rank - end_rank);
-            int file_diff = std::abs(start_file - end_file);
-            if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) {
-                std::cerr << "Error: Invalid knight move. Knights move in an L-shape." << std::endl;
-                return false;
-            }
-        }
-        else if ((whiteBishops & start_bit) || (blackBishops & start_bit)) {
-            if (std::abs(start_rank - end_rank) != std::abs(start_file - end_file) || !isPathClear(start_bit, end_bit, allPieces)) {
-                std::cerr << "Error: Invalid bishop move. Path is not clear or move is not diagonal." << std::endl;
-                return false;
-            }
-        }
-        else if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
-            bool isStraight = (start_rank == end_rank) || (start_file == end_file);
-            if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) {
-                std::cerr << "Error: Invalid rook move. Path is not clear or move is not straight." << std::endl;
-                return false;
-            }
-        }
-        else if ((whiteQueens & start_bit) || (blackQueens & start_bit)) {
-            bool isHorizontal = start_rank == end_rank;
-            bool isVertical = start_file == end_file;
-            bool isDiagonal = std::abs(start_rank - end_rank) == std::abs(start_file - end_file);
-            if ((!isHorizontal && !isVertical && !isDiagonal) || !isPathClear(start_bit, end_bit, allPieces)) {
-                std::cerr << "Error: Invalid queen move. Path is not clear or move is not straight/diagonal." << std::endl;
-                return false;
-            }
-        }
-        else if ((whiteKing & start_bit) || (blackKing & start_bit)) {
-            int rank_diff = std::abs(start_rank - end_rank);
-            int file_diff = std::abs(start_file - end_file);
-            if (rank_diff > 1 || file_diff > 1) {
-                std::cerr << "Error: Invalid king move. Kings move one square at a time." << std::endl;
-                return false;
-            }
-        } else {
-            // No valid piece found at the start square, though this should be caught by the friendlyPieces check
-            std::cerr << "Error: No valid piece found at the start square." << std::endl;
-            return false;
-        }
-
-        // --- Execute the Move and Capture ---
-        
-        // Handle captures by clearing the destination bit from all enemy pieces
-        if (this->sideToMove == Color::WHITE) {
-            // Special case for en passant capture
-            if ((whitePawns & start_bit) && (end_bit == this->enPassent)) {
-                uint64_t capturedPawnSquare = end_bit >> 8;
-                blackPawns &= ~capturedPawnSquare;
-            } else {
-                 // Regular capture logic
-                blackPawns &= ~end_bit;
-                blackKnights &= ~end_bit;
-                blackBishops &= ~end_bit;
-                blackRooks &= ~end_bit;
-                blackQueens &= ~end_bit;
-                blackKing &= ~end_bit;
-            }
-        } else { // sideToMove == Color::BLACK
-            // Special case for en passant capture
-            if ((blackPawns & start_bit) && (end_bit == this->enPassent)) {
-                uint64_t capturedPawnSquare = end_bit << 8;
-                whitePawns &= ~capturedPawnSquare;
-            } else {
-                // Regular capture logic
-                whitePawns &= ~end_bit;
-                whiteKnights &= ~end_bit;
-                whiteBishops &= ~end_bit;
-                whiteRooks &= ~end_bit;
-                whiteQueens &= ~end_bit;
-                whiteKing &= ~end_bit;
-            }
-        }
-        
-        // Move the piece from the start square to the end square
-        if (this->sideToMove == Color::WHITE) {
-            if (whitePawns & start_bit) {
-                whitePawns &= ~start_bit;
-                whitePawns |= end_bit;
-            } else if (whiteKnights & start_bit) {
-                whiteKnights &= ~start_bit;
-                whiteKnights |= end_bit;
-            } else if (whiteBishops & start_bit) {
-                whiteBishops &= ~start_bit;
-                whiteBishops |= end_bit;
-            } else if (whiteRooks & start_bit) {
-                whiteRooks &= ~start_bit;
-                whiteRooks |= end_bit;
-                // Revoke castling rights if a rook moves from its starting square
-                if (start == Square::A1) whiteCastleQueenside = false;
-                if (start == Square::H1) whiteCastleKingside = false;
-            } else if (whiteQueens & start_bit) {
-                whiteQueens &= ~start_bit;
-                whiteQueens |= end_bit;
-            } else if (whiteKing & start_bit) {
-                whiteKing &= ~start_bit;
-                whiteKing |= end_bit;
-                // Revoke all castling rights if the king moves
-                whiteCastleKingside = false;
-                whiteCastleQueenside = false;
-            }
-        } else { // sideToMove == Color::BLACK
-            if (blackPawns & start_bit) {
-                blackPawns &= ~start_bit;
-                blackPawns |= end_bit;
-            } else if (blackKnights & start_bit) {
-                blackKnights &= ~start_bit;
-                blackKnights |= end_bit;
-            } else if (blackBishops & start_bit) {
-                blackBishops &= ~start_bit;
-                blackBishops |= end_bit;
-            } else if (blackRooks & start_bit) {
-                blackRooks &= ~start_bit;
-                blackRooks |= end_bit;
-                // Revoke castling rights if a rook moves from its starting square
-                if (start == Square::A8) blackCastleQueenside = false;
-                if (start == Square::H8) blackCastleKingside = false;
-            } else if (blackQueens & start_bit) {
-                blackQueens &= ~start_bit;
-                blackQueens |= end_bit;
-            } else if (blackKing & start_bit) {
-                blackKing &= ~start_bit;
-                blackKing |= end_bit;
-                // Revoke all castling rights if the king moves
-                blackCastleKingside = false;
-                blackCastleQueenside = false;
-            }
-        }
-
-        // Handle en passant flag reset
-        if (!isPawnDoubleStep) {
-            this->enPassent = 0;
-        }
-
-        // Toggle side to move
-        if (this->sideToMove == Color::WHITE) {
-            this->sideToMove = Color::BLACK;
-        } else {
-            this->sideToMove = Color::WHITE;
-        }
-        
-        return true;
+        return false;
     }
 
 private:
@@ -472,6 +582,7 @@ public:
 private:
     std::unique_ptr<Board> board;
 };
+
 
 int main() {
     BoardBuilder boardBuilder(Square::A1, Square::B4, Color::WHITE);
