@@ -2,6 +2,11 @@
 #include <memory>
 #include <string>
 
+enum class Color {
+    WHITE,
+    BLACK
+};
+
 enum class Square : uint64_t {
     A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
     A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
@@ -35,6 +40,8 @@ public:
     void setWhiteCastleQueenside(bool canCastle) { this->whiteCastleQueenside = canCastle; }
     
     void setEnPassent(uint64_t square) { this->enPassent = square; }
+
+    void setSideToMove(Color sideToMove) { this->sideToMove = sideToMove; }
 
     std::string toString() const {
         std::string result = "";
@@ -87,13 +94,16 @@ private:
     bool whiteCastleQueenside;
 
     uint64_t enPassent;
+
+    Color sideToMove;
 };
 
 class BoardBuilder {
 public:
-    BoardBuilder(Square blackKingSquare, Square whiteKingSquare) : board(std::make_unique<Board>()) {
+    BoardBuilder(Square blackKingSquare, Square whiteKingSquare, Color sideToMove) : board(std::make_unique<Board>()) {
         board->setBlackKing(static_cast<uint64_t>(blackKingSquare));
         board->setWhiteKing(static_cast<uint64_t>(whiteKingSquare));
+        board->setSideToMove(sideToMove);
     }
 
     BoardBuilder& setBlackBishops(uint64_t squares) { board->setBlackBishops(squares); return *this;}
@@ -122,7 +132,7 @@ private:
 };
 
 int main() {
-    BoardBuilder boardBuilder = BoardBuilder(Square::A1, Square::B4);
+    BoardBuilder boardBuilder(Square::A1, Square::B4, Color::WHITE);
     std::unique_ptr<Board> board = boardBuilder
         .setBlackBishops(10)
         .Build();
