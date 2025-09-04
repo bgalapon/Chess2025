@@ -7,6 +7,12 @@ enum class Color {
     BLACK
 };
 
+// Bitboard masks for ranks for efficient checking
+const uint64_t RANK_2 = 0x000000000000FF00ULL;
+const uint64_t RANK_4 = 0x0000000000FF0000ULL;
+const uint64_t RANK_5 = 0x0000FF0000000000ULL;
+const uint64_t RANK_7 = 0x00FF000000000000ULL;
+
 enum class Square : uint64_t {
     A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
     A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
@@ -72,6 +78,149 @@ public:
         }
         return result;
     }
+
+    // move performs a move and returns a bool indicating if the move was successful
+    bool move(Square start, Square end) {
+        uint64_t start_bit = static_cast<uint64_t>(start);
+        uint64_t end_bit = static_cast<uint64_t>(end);
+        
+        bool isPawnDoubleStep = false;
+
+        // Get bitboards for friendly and enemy pieces for efficiency
+        uint64_t friendlyPieces, enemyPieces;
+        if (this->sideToMove == Color::WHITE) {
+            friendlyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+            enemyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+        } else {
+            friendlyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+            enemyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+        }
+
+        // Check if a piece of the current side exists at the start square
+        if ((friendlyPieces & start_bit) == 0) {
+            std::cerr << "Error: No piece of the current side at the start square." << std::endl;
+            return false;
+        }
+
+        // Check if the destination square is occupied by a friendly piece
+        if ((friendlyPieces & end_bit) != 0) {
+            std::cerr << "Error: Cannot capture a friendly piece." << std::endl;
+            return false;
+        }
+
+        // Handle captures by clearing the destination bit from all enemy pieces
+        if (this->sideToMove == Color::WHITE) {
+            // Check for en passant capture
+            if ((whitePawns & start_bit) && (end_bit == this->enPassent)) {
+                // If the white pawn moves from rank 5 to rank 6 to capture en passant
+                uint64_t capturedPawnSquare = end_bit >> 8;
+                blackPawns &= ~capturedPawnSquare;
+            } else {
+                 // Regular capture logic
+                blackPawns &= ~end_bit;
+                blackKnights &= ~end_bit;
+                blackBishops &= ~end_bit;
+                blackRooks &= ~end_bit;
+                blackQueens &= ~end_bit;
+                blackKing &= ~end_bit;
+            }
+        } else { // sideToMove == Color::BLACK
+            // Check for en passant capture
+            if ((blackPawns & start_bit) && (end_bit == this->enPassent)) {
+                // If the black pawn moves from rank 4 to rank 3 to capture en passant
+                uint64_t capturedPawnSquare = end_bit << 8;
+                whitePawns &= ~capturedPawnSquare;
+            } else {
+                // Regular capture logic
+                whitePawns &= ~end_bit;
+                whiteKnights &= ~end_bit;
+                whiteBishops &= ~end_bit;
+                whiteRooks &= ~end_bit;
+                whiteQueens &= ~end_bit;
+                whiteKing &= ~end_bit;
+            }
+        }
+        
+        // Move the piece from the start square to the end square
+        if (this->sideToMove == Color::WHITE) {
+            if (whitePawns & start_bit) {
+                whitePawns &= ~start_bit;
+                whitePawns |= end_bit;
+                // Check for double-step move to set en passant flag using masks
+                if ((start_bit & RANK_2) && (end_bit & RANK_4)) {
+                    this->enPassent = end_bit >> 8;
+                    isPawnDoubleStep = true;
+                }
+            } else if (whiteKnights & start_bit) {
+                whiteKnights &= ~start_bit;
+                whiteKnights |= end_bit;
+            } else if (whiteBishops & start_bit) {
+                whiteBishops &= ~start_bit;
+                whiteBishops |= end_bit;
+            } else if (whiteRooks & start_bit) {
+                whiteRooks &= ~start_bit;
+                whiteRooks |= end_bit;
+                // Revoke castling rights if a rook moves from its starting square
+                if (start == Square::A1) whiteCastleQueenside = false;
+                if (start == Square::H1) whiteCastleKingside = false;
+            } else if (whiteQueens & start_bit) {
+                whiteQueens &= ~start_bit;
+                whiteQueens |= end_bit;
+            } else if (whiteKing & start_bit) {
+                whiteKing &= ~start_bit;
+                whiteKing |= end_bit;
+                // Revoke all castling rights if the king moves
+                whiteCastleKingside = false;
+                whiteCastleQueenside = false;
+            }
+        } else { // sideToMove == Color::BLACK
+            if (blackPawns & start_bit) {
+                blackPawns &= ~start_bit;
+                blackPawns |= end_bit;
+                // Check for double-step move to set en passant flag using masks
+                if ((start_bit & RANK_7) && (end_bit & RANK_5)) {
+                    this->enPassent = end_bit << 8;
+                    isPawnDoubleStep = true;
+                }
+            } else if (blackKnights & start_bit) {
+                blackKnights &= ~start_bit;
+                blackKnights |= end_bit;
+            } else if (blackBishops & start_bit) {
+                blackBishops &= ~start_bit;
+                blackBishops |= end_bit;
+            } else if (blackRooks & start_bit) {
+                blackRooks &= ~start_bit;
+                blackRooks |= end_bit;
+                // Revoke castling rights if a rook moves from its starting square
+                if (start == Square::A8) blackCastleQueenside = false;
+                if (start == Square::H8) blackCastleKingside = false;
+            } else if (blackQueens & start_bit) {
+                blackQueens &= ~start_bit;
+                blackQueens |= end_bit;
+            } else if (blackKing & start_bit) {
+                blackKing &= ~start_bit;
+                blackKing |= end_bit;
+                // Revoke all castling rights if the king moves
+                blackCastleKingside = false;
+                blackCastleQueenside = false;
+            }
+        }
+
+        // Reset en passant flag if the move was not a pawn double-step
+        if (!isPawnDoubleStep) {
+            this->enPassent = 0;
+        }
+
+        // Toggle side to move
+        if (this->sideToMove == Color::WHITE) {
+            this->sideToMove = Color::BLACK;
+        } else {
+            this->sideToMove = Color::WHITE;
+        }
+        
+        return true;
+    }
+
 
 private:
     uint64_t blackBishops;
