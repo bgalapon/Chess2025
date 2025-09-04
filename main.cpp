@@ -235,6 +235,46 @@ public:
 
         // Check for legal rook moves
         if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
+            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+            uint8_t start_file = getSquareIndex(start_bit) & 7;
+            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+            uint8_t end_file = getSquareIndex(end_bit) & 7;
+            bool isStraight = (start_rank == end_rank) || (start_file == end_file);
+            if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) {
+                std::cerr << "Error: Invalid rook move. Path is not clear or move is not straight." << std::endl;
+                return false;
+            }
+        }
+
+        // Check for legal bishop moves
+        if ((whiteBishops & start_bit) || (blackBishops & start_bit)) {
+            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+            uint8_t start_file = getSquareIndex(start_bit) & 7;
+            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+            uint8_t end_file = getSquareIndex(end_bit) & 7;
+            if (std::abs(start_rank - end_rank) != std::abs(start_file - end_file) || !isPathClear(start_bit, end_bit, allPieces)) {
+                std::cerr << "Error: Invalid bishop move. Path is not clear or move is not diagonal." << std::endl;
+                return false;
+            }
+        }
+
+        // Check for legal queen moves
+        if ((whiteQueens & start_bit) || (blackQueens & start_bit)) {
+            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+            uint8_t start_file = getSquareIndex(start_bit) & 7;
+            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+            uint8_t end_file = getSquareIndex(end_bit) & 7;
+            bool isHorizontal = start_rank == end_rank;
+            bool isVertical = start_file == end_file;
+            bool isDiagonal = std::abs(start_rank - end_rank) == std::abs(start_file - end_file);
+            if ((!isHorizontal && !isVertical && !isDiagonal) || !isPathClear(start_bit, end_bit, allPieces)) {
+                std::cerr << "Error: Invalid queen move. Path is not clear or move is not straight/diagonal." << std::endl;
+                return false;
+            }
+        }
+
+        // Check for legal rook moves
+        if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
             if (!isPathClear(start_bit, end_bit, allPieces)) {
                 std::cerr << "Error: Invalid rook move. Path is not clear." << std::endl;
                 return false;
