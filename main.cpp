@@ -13,6 +13,11 @@ const uint64_t RANK_4 = 0x0000000000FF0000ULL;
 const uint64_t RANK_5 = 0x0000FF0000000000ULL;
 const uint64_t RANK_7 = 0x00FF000000000000ULL;
 
+const uint64_t WHITE_KINGSIDE_CASTLE_PATH = 96ULL;
+const uint64_t WHITE_QUEENSIDE_CASTLE_PATH = 14ULL;
+const uint64_t BLACK_KINGSIDE_CASTLE_PATH = 6917529027641081856ULL;
+const uint64_t BLACK_QUEENSIDE_CASTLE_PATH = 1008806316530991104ULL;
+
 enum class Square : uint64_t {
     A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
     A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
@@ -85,6 +90,7 @@ public:
         uint64_t end_bit = static_cast<uint64_t>(end);
         
         bool isPawnDoubleStep = false;
+        bool isCastlingMove = false;
 
         // Get bitboards for friendly and enemy pieces for efficiency
         uint64_t friendlyPieces, enemyPieces;
@@ -95,6 +101,72 @@ public:
             friendlyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
             enemyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
         }
+        
+        // --- Handle Castling Moves First ---
+        if (this->sideToMove == Color::WHITE) {
+            // White King-side castling
+            if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & WHITE_KINGSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    whiteKing = static_cast<uint64_t>(Square::G1);
+                    whiteRooks &= ~static_cast<uint64_t>(Square::H1);
+                    whiteRooks |= static_cast<uint64_t>(Square::F1);
+                    isCastlingMove = true;
+                }
+            }
+            // White Queen-side castling
+            else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & WHITE_QUEENSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    whiteKing = static_cast<uint64_t>(Square::C1);
+                    whiteRooks &= ~static_cast<uint64_t>(Square::A1);
+                    whiteRooks |= static_cast<uint64_t>(Square::D1);
+                    isCastlingMove = true;
+                }
+            }
+        } else { // sideToMove == Color::BLACK
+            // Black King-side castling
+            if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & BLACK_KINGSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    blackKing = static_cast<uint64_t>(Square::G8);
+                    blackRooks &= ~static_cast<uint64_t>(Square::H8);
+                    blackRooks |= static_cast<uint64_t>(Square::F8);
+                    isCastlingMove = true;
+                }
+            }
+            // Black Queen-side castling
+            else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
+                // Check if squares between king and rook are empty
+                if (!((friendlyPieces | enemyPieces) & BLACK_QUEENSIDE_CASTLE_PATH)) {
+                    // Move the king and rook
+                    blackKing = static_cast<uint64_t>(Square::C8);
+                    blackRooks &= ~static_cast<uint64_t>(Square::A8);
+                    blackRooks |= static_cast<uint64_t>(Square::D8);
+                    isCastlingMove = true;
+                }
+            }
+        }
+
+        // Exit early if a castling move was successfully executed
+        if (isCastlingMove) {
+            this->whiteCastleKingside = false;
+            this->whiteCastleQueenside = false;
+            this->blackCastleKingside = false;
+            this->blackCastleQueenside = false;
+            this->enPassent = 0;
+            if (this->sideToMove == Color::WHITE) {
+                this->sideToMove = Color::BLACK;
+            } else {
+                this->sideToMove = Color::WHITE;
+            }
+            return true;
+        }
+
+        // --- Standard Move Logic (only if not a castling move) ---
 
         // Check if a piece of the current side exists at the start square
         if ((friendlyPieces & start_bit) == 0) {
