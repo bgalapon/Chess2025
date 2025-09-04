@@ -233,12 +233,43 @@ public:
             return false;
         }
 
-        // Check for legal knight moves
-        if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
-            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
-            uint8_t start_file = getSquareIndex(start_bit) & 7;
-            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
-            uint8_t end_file = getSquareIndex(end_bit) & 7;
+        // Get start and end square indices for validation
+        uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+        uint8_t start_file = getSquareIndex(start_bit) & 7;
+        uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+        uint8_t end_file = getSquareIndex(end_bit) & 7;
+        
+        // Piece-specific move validation
+        if ((whitePawns & start_bit) || (blackPawns & start_bit)) {
+            if (this->sideToMove == Color::WHITE) {
+                if (end_bit == (start_bit << 8) && (allPieces & end_bit) == 0) {
+                    // Valid single step forward
+                } else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
+                    isPawnDoubleStep = true;
+                } else if ((end_bit == (start_bit << 7) || end_bit == (start_bit << 9)) && (enemyPieces & end_bit)) {
+                    // Valid capture
+                } else if (end_bit == this->enPassent) {
+                    // Valid en passant
+                } else {
+                    std::cerr << "Error: Invalid white pawn move." << std::endl;
+                    return false;
+                }
+            } else { // Black pawn
+                if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {
+                    // Valid single step forward
+                } else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) {
+                    isPawnDoubleStep = true;
+                } else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {
+                    // Valid capture
+                } else if (end_bit == this->enPassent) {
+                    // Valid en passant
+                } else {
+                    std::cerr << "Error: Invalid black pawn move." << std::endl;
+                    return false;
+                }
+            }
+        }
+        else if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
             int rank_diff = std::abs(start_rank - end_rank);
             int file_diff = std::abs(start_file - end_file);
             if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) {
@@ -246,38 +277,20 @@ public:
                 return false;
             }
         }
-
-        // Check for legal rook moves
-        if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
-            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
-            uint8_t start_file = getSquareIndex(start_bit) & 7;
-            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
-            uint8_t end_file = getSquareIndex(end_bit) & 7;
+        else if ((whiteBishops & start_bit) || (blackBishops & start_bit)) {
+            if (std::abs(start_rank - end_rank) != std::abs(start_file - end_file) || !isPathClear(start_bit, end_bit, allPieces)) {
+                std::cerr << "Error: Invalid bishop move. Path is not clear or move is not diagonal." << std::endl;
+                return false;
+            }
+        }
+        else if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
             bool isStraight = (start_rank == end_rank) || (start_file == end_file);
             if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) {
                 std::cerr << "Error: Invalid rook move. Path is not clear or move is not straight." << std::endl;
                 return false;
             }
         }
-
-        // Check for legal bishop moves
-        if ((whiteBishops & start_bit) || (blackBishops & start_bit)) {
-            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
-            uint8_t start_file = getSquareIndex(start_bit) & 7;
-            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
-            uint8_t end_file = getSquareIndex(end_bit) & 7;
-            if (std::abs(start_rank - end_rank) != std::abs(start_file - end_file) || !isPathClear(start_bit, end_bit, allPieces)) {
-                std::cerr << "Error: Invalid bishop move. Path is not clear or move is not diagonal." << std::endl;
-                return false;
-            }
-        }
-
-        // Check for legal queen moves
-        if ((whiteQueens & start_bit) || (blackQueens & start_bit)) {
-            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
-            uint8_t start_file = getSquareIndex(start_bit) & 7;
-            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
-            uint8_t end_file = getSquareIndex(end_bit) & 7;
+        else if ((whiteQueens & start_bit) || (blackQueens & start_bit)) {
             bool isHorizontal = start_rank == end_rank;
             bool isVertical = start_file == end_file;
             bool isDiagonal = std::abs(start_rank - end_rank) == std::abs(start_file - end_file);
@@ -286,20 +299,25 @@ public:
                 return false;
             }
         }
-
-        // Check for legal rook moves
-        if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
-            if (!isPathClear(start_bit, end_bit, allPieces)) {
-                std::cerr << "Error: Invalid rook move. Path is not clear." << std::endl;
+        else if ((whiteKing & start_bit) || (blackKing & start_bit)) {
+            int rank_diff = std::abs(start_rank - end_rank);
+            int file_diff = std::abs(start_file - end_file);
+            if (rank_diff > 1 || file_diff > 1) {
+                std::cerr << "Error: Invalid king move. Kings move one square at a time." << std::endl;
                 return false;
             }
+        } else {
+            // No valid piece found at the start square, though this should be caught by the friendlyPieces check
+            std::cerr << "Error: No valid piece found at the start square." << std::endl;
+            return false;
         }
 
+        // --- Execute the Move and Capture ---
+        
         // Handle captures by clearing the destination bit from all enemy pieces
         if (this->sideToMove == Color::WHITE) {
-            // Check for en passant capture
+            // Special case for en passant capture
             if ((whitePawns & start_bit) && (end_bit == this->enPassent)) {
-                // If the white pawn moves from rank 5 to rank 6 to capture en passant
                 uint64_t capturedPawnSquare = end_bit >> 8;
                 blackPawns &= ~capturedPawnSquare;
             } else {
@@ -312,9 +330,8 @@ public:
                 blackKing &= ~end_bit;
             }
         } else { // sideToMove == Color::BLACK
-            // Check for en passant capture
+            // Special case for en passant capture
             if ((blackPawns & start_bit) && (end_bit == this->enPassent)) {
-                // If the black pawn moves from rank 4 to rank 3 to capture en passant
                 uint64_t capturedPawnSquare = end_bit << 8;
                 whitePawns &= ~capturedPawnSquare;
             } else {
@@ -333,11 +350,6 @@ public:
             if (whitePawns & start_bit) {
                 whitePawns &= ~start_bit;
                 whitePawns |= end_bit;
-                // Check for double-step move to set en passant flag using masks
-                if ((start_bit & RANK_2) && (end_bit & RANK_4)) {
-                    this->enPassent = end_bit >> 8;
-                    isPawnDoubleStep = true;
-                }
             } else if (whiteKnights & start_bit) {
                 whiteKnights &= ~start_bit;
                 whiteKnights |= end_bit;
@@ -364,11 +376,6 @@ public:
             if (blackPawns & start_bit) {
                 blackPawns &= ~start_bit;
                 blackPawns |= end_bit;
-                // Check for double-step move to set en passant flag using masks
-                if ((start_bit & RANK_7) && (end_bit & RANK_5)) {
-                    this->enPassent = end_bit << 8;
-                    isPawnDoubleStep = true;
-                }
             } else if (blackKnights & start_bit) {
                 blackKnights &= ~start_bit;
                 blackKnights |= end_bit;
@@ -393,7 +400,7 @@ public:
             }
         }
 
-        // Reset en passant flag if the move was not a pawn double-step
+        // Handle en passant flag reset
         if (!isPawnDoubleStep) {
             this->enPassent = 0;
         }
