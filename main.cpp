@@ -18,6 +18,12 @@ const uint64_t WHITE_QUEENSIDE_CASTLE_PATH = 14ULL;
 const uint64_t BLACK_KINGSIDE_CASTLE_PATH = 6917529027641081856ULL;
 const uint64_t BLACK_QUEENSIDE_CASTLE_PATH = 1008806316530991104ULL;
 
+// Helper function to get the index (0-63) from a single-bit bitboard
+inline uint8_t getSquareIndex(uint64_t bitboard) {
+    if (bitboard == 0) return 64; // Sentinel value for invalid square
+    return __builtin_ctzll(bitboard);
+}
+
 enum class Square : uint64_t {
     A1 = 1ULL << 0, B1 = 1ULL << 1, C1 = 1ULL << 2, D1 = 1ULL << 3, E1 = 1ULL << 4, F1 = 1ULL << 5, G1 = 1ULL << 6, H1 = 1ULL << 7,
     A2 = 1ULL << 8, B2 = 1ULL << 9, C2 = 1ULL << 10, D2 = 1ULL << 11, E2 = 1ULL << 12, F2 = 1ULL << 13, G2 = 1ULL << 14, H2 = 1ULL << 15,
@@ -84,6 +90,52 @@ public:
         return result;
     }
 
+    bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces) {
+        uint8_t start_index = getSquareIndex(start_bit);
+        uint8_t end_index = getSquareIndex(end_bit);
+        
+        int start_rank = start_index >> 3;
+        int start_file = start_index & 7;
+        int end_rank = end_index >> 3;
+        int end_file = end_index & 7;
+
+        // Check for horizontal move
+        if (start_rank == end_rank) {
+            uint64_t pathMask;
+            if (start_bit < end_bit) {
+                pathMask = (end_bit - 1) & ~((start_bit << 1) - 1);
+            } else {
+                pathMask = (start_bit - 1) & ~((end_bit << 1) - 1);
+            }
+            return (pathMask & allPieces) == 0;
+        }
+
+        // Check for vertical move
+        if (start_file == end_file) {
+            uint64_t pathMask = 0;
+            int step = (start_index < end_index) ? 8 : -8;
+            for (int i = start_index + step; i != end_index; i += step) {
+                pathMask |= (1ULL << i);
+            }
+            return (pathMask & allPieces) == 0;
+        }
+
+        // Check for diagonal move
+        if (std::abs(start_rank - end_rank) == std::abs(start_file - end_file)) {
+            int step_rank = (start_rank < end_rank) ? 8 : -8;
+            int step_file = (start_file < end_file) ? 1 : -1;
+            int step = step_rank + step_file;
+            for (int i = start_index + step; i != end_index; i += step) {
+                if ((allPieces & (1ULL << i)) != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        return false;
+    }
+
     // move performs a move and returns a bool indicating if the move was successful
     bool move(Square start, Square end) {
         uint64_t start_bit = static_cast<uint64_t>(start);
@@ -93,7 +145,7 @@ public:
         bool isCastlingMove = false;
 
         // Get bitboards for friendly and enemy pieces for efficiency
-        uint64_t friendlyPieces, enemyPieces;
+        uint64_t friendlyPieces, enemyPieces, allPieces;
         if (this->sideToMove == Color::WHITE) {
             friendlyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
             enemyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
@@ -101,6 +153,7 @@ public:
             friendlyPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
             enemyPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
         }
+        allPieces = friendlyPieces | enemyPieces;
         
         // --- Handle Castling Moves First ---
         if (this->sideToMove == Color::WHITE) {
@@ -178,6 +231,14 @@ public:
         if ((friendlyPieces & end_bit) != 0) {
             std::cerr << "Error: Cannot capture a friendly piece." << std::endl;
             return false;
+        }
+
+        // Check for legal rook moves
+        if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
+            if (!isPathClear(start_bit, end_bit, allPieces)) {
+                std::cerr << "Error: Invalid rook move. Path is not clear." << std::endl;
+                return false;
+            }
         }
 
         // Handle captures by clearing the destination bit from all enemy pieces
@@ -292,7 +353,6 @@ public:
         
         return true;
     }
-
 
 private:
     uint64_t blackBishops;
