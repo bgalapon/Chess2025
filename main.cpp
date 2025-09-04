@@ -1,6 +1,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <stdexcept>
+#include <cmath> // For std::abs
+#include <vector> // For bitboard to index conversion
 
 enum class Color {
     WHITE,
@@ -490,27 +493,6 @@ public:
         }
         return attacks;
     }
-    
-    // Checks if a given square is attacked by the opponent.
-    bool isSquareAttacked(uint64_t square, Color kingColor) {
-        uint64_t opponentPawns = (kingColor == Color::WHITE) ? blackPawns : whitePawns;
-        uint64_t opponentKnights = (kingColor == Color::WHITE) ? blackKnights : whiteKnights;
-        uint64_t opponentBishops = (kingColor == Color::WHITE) ? blackBishops : whiteBishops;
-        uint64_t opponentRooks = (kingColor == Color::WHITE) ? blackRooks : whiteRooks;
-        uint64_t opponentQueens = (kingColor == Color::WHITE) ? blackQueens : whiteQueens;
-        uint64_t opponentKing = (kingColor == Color::WHITE) ? blackKing : whiteKing;
-        
-        uint64_t allPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing |
-                             whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
-        
-        uint64_t allOpponentAttacks = getPawnAttacks(kingColor, opponentPawns);
-        allOpponentAttacks |= getKnightAttacks(opponentKnights);
-        allOpponentAttacks |= getKingAttacks(opponentKing);
-        allOpponentAttacks |= getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true);
-        allOpponentAttacks |= getSlidingAttacks(opponentBishops | opponentQueens, allPieces, false);
-        
-        return (square & allOpponentAttacks) != 0;
-    }
 
     // Checks if any of the given squares are attacked by the opponent.
     bool areSquaresAttacked(uint64_t squares, Color kingColor) {
@@ -537,7 +519,7 @@ public:
     // Checks if the king of the given color is in check
     bool isKingInCheck(Color kingColor) {
         uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
-        return isSquareAttacked(kingSquare, kingColor);
+        return areSquaresAttacked(kingSquare, kingColor);
     }
 
     // New public `move` function that validates moves
