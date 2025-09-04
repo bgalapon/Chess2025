@@ -233,6 +233,20 @@ public:
             return false;
         }
 
+        // Check for legal knight moves
+        if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
+            uint8_t start_rank = getSquareIndex(start_bit) >> 3;
+            uint8_t start_file = getSquareIndex(start_bit) & 7;
+            uint8_t end_rank = getSquareIndex(end_bit) >> 3;
+            uint8_t end_file = getSquareIndex(end_bit) & 7;
+            int rank_diff = std::abs(start_rank - end_rank);
+            int file_diff = std::abs(start_file - end_file);
+            if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) {
+                std::cerr << "Error: Invalid knight move. Knights move in an L-shape." << std::endl;
+                return false;
+            }
+        }
+
         // Check for legal rook moves
         if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
             uint8_t start_rank = getSquareIndex(start_bit) >> 3;
