@@ -16,7 +16,7 @@ const uint64_t RANK_5 = 0x000000FF00000000ULL;
 const uint64_t RANK_7 = 0x00FF000000000000ULL;
 
 // Bitboard masks for castling paths
-const uint64_t WHITE_KINGSIDE_CASTLE_PATH = 96ULL;
+const uint64_t WHITE_KINGSIDE_CASTLE_PATH = 112ULL;
 const uint64_t WHITE_QUEENSIDE_CASTLE_PATH = 14ULL;
 const uint64_t BLACK_KINGSIDE_CASTLE_PATH = 6917529027641081856ULL;
 const uint64_t BLACK_QUEENSIDE_CASTLE_PATH = 1008806316530991104ULL;
@@ -126,12 +126,11 @@ bool Board::applyMove(Square start, Square end) {
     // --- Handle Castling Moves First ---
     if (this->sideToMove == Color::WHITE) {
         if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
-            uint64_t squaresToCheck = static_cast<uint64_t>(Square::E1) | static_cast<uint64_t>(Square::F1) | static_cast<uint64_t>(Square::G1);
-            if (areSquaresAttacked(squaresToCheck, Color::WHITE)) {
+            if (areSquaresAttacked(WHITE_KINGSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cerr << "white king castling kingside out of, into, or through check" << std::endl;
                 return false;
             }
-            if (!((friendlyPieces | enemyPieces) & WHITE_KINGSIDE_CASTLE_PATH)) {
+            if (!((friendlyPieces | enemyPieces) & (WHITE_KINGSIDE_CASTLE_PATH &~whiteKing))) {
                 whiteKing = static_cast<uint64_t>(Square::G1);
                 whiteRooks &= ~static_cast<uint64_t>(Square::H1);
                 whiteRooks |= static_cast<uint64_t>(Square::F1);
@@ -139,12 +138,11 @@ bool Board::applyMove(Square start, Square end) {
             }
         }
         else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
-            uint64_t squaresToCheck = static_cast<uint64_t>(Square::E1) | static_cast<uint64_t>(Square::D1) | static_cast<uint64_t>(Square::C1);
-            if (areSquaresAttacked(squaresToCheck, Color::WHITE)) {
+            if (areSquaresAttacked(WHITE_QUEENSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cerr << "white king castling queenside out of, into, or through check" << std::endl;
                 return false;
             }
-            if (!((friendlyPieces | enemyPieces) & WHITE_QUEENSIDE_CASTLE_PATH)) {
+            if (!((friendlyPieces | enemyPieces) & (WHITE_QUEENSIDE_CASTLE_PATH &~whiteKing))) {
                 whiteKing = static_cast<uint64_t>(Square::C1);
                 whiteRooks &= ~static_cast<uint64_t>(Square::A1);
                 whiteRooks |= static_cast<uint64_t>(Square::D1);
@@ -153,12 +151,11 @@ bool Board::applyMove(Square start, Square end) {
         }
     } else {
         if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
-            uint64_t squaresToCheck = static_cast<uint64_t>(Square::E8) | static_cast<uint64_t>(Square::F8) | static_cast<uint64_t>(Square::G8);
-            if (areSquaresAttacked(squaresToCheck, Color::BLACK)) {
+            if (areSquaresAttacked(BLACK_KINGSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cerr << "black king castling kingside out of, into, or through check" << std::endl;
                 return false;
             }
-            if (!((friendlyPieces | enemyPieces) & BLACK_KINGSIDE_CASTLE_PATH)) {
+            if (!((friendlyPieces | enemyPieces) & (BLACK_KINGSIDE_CASTLE_PATH &~blackKing))) {
                 blackKing = static_cast<uint64_t>(Square::G8);
                 blackRooks &= ~static_cast<uint64_t>(Square::H8);
                 blackRooks |= static_cast<uint64_t>(Square::F8);
@@ -166,12 +163,11 @@ bool Board::applyMove(Square start, Square end) {
             }
         }
         else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
-            uint64_t squaresToCheck = static_cast<uint64_t>(Square::E8) | static_cast<uint64_t>(Square::D8) | static_cast<uint64_t>(Square::C8);
-            if (areSquaresAttacked(squaresToCheck, Color::BLACK)) {
+            if (areSquaresAttacked(BLACK_QUEENSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cerr << "black king castling queenside out of, into, or through check" << std::endl;
                 return false;
             }
-            if (!((friendlyPieces | enemyPieces) & BLACK_QUEENSIDE_CASTLE_PATH)) {
+            if (!((friendlyPieces | enemyPieces) & (BLACK_QUEENSIDE_CASTLE_PATH &~blackKing))) {
                 blackKing = static_cast<uint64_t>(Square::C8);
                 blackRooks &= ~static_cast<uint64_t>(Square::A8);
                 blackRooks |= static_cast<uint64_t>(Square::D8);
@@ -366,16 +362,17 @@ uint64_t Board::getSlidingAttacks(uint64_t pieces, uint64_t allPieces, bool isRo
     return attacks;
 }
 
-bool Board::areSquaresAttacked(uint64_t squares, Color kingColor) {
-    uint64_t opponentPawns = (kingColor == Color::WHITE) ? blackPawns : whitePawns;
-    uint64_t opponentKnights = (kingColor == Color::WHITE) ? blackKnights : whiteKnights;
-    uint64_t opponentBishops = (kingColor == Color::WHITE) ? blackBishops : whiteBishops;
-    uint64_t opponentRooks = (kingColor == Color::WHITE) ? blackRooks : whiteRooks;
-    uint64_t opponentQueens = (kingColor == Color::WHITE) ? blackQueens : whiteQueens;
-    uint64_t opponentKing = (kingColor == Color::WHITE) ? blackKing : whiteKing;
+// areSquaresAttacked checks if the given squares are attacked by the pieces of the given color
+bool Board::areSquaresAttacked(uint64_t squares, Color opponentColor) {
+    uint64_t opponentPawns = (opponentColor == Color::BLACK) ? blackPawns : whitePawns;
+    uint64_t opponentKnights = (opponentColor == Color::BLACK) ? blackKnights : whiteKnights;
+    uint64_t opponentBishops = (opponentColor == Color::BLACK) ? blackBishops : whiteBishops;
+    uint64_t opponentRooks = (opponentColor == Color::BLACK) ? blackRooks : whiteRooks;
+    uint64_t opponentQueens = (opponentColor == Color::BLACK) ? blackQueens : whiteQueens;
+    uint64_t opponentKing = (opponentColor == Color::BLACK) ? blackKing : whiteKing;
     uint64_t allPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing |
                          whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
-    if ((getPawnAttacks(kingColor, opponentPawns) & squares) != 0) return true;
+    if ((getPawnAttacks(opponentColor, opponentPawns) & squares) != 0) return true;
     if ((getKnightAttacks(opponentKnights) & squares) != 0) return true;
     if ((getKingAttacks(opponentKing) & squares) != 0) return true;
     if ((getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true) & squares) != 0) return true;
@@ -385,7 +382,8 @@ bool Board::areSquaresAttacked(uint64_t squares, Color kingColor) {
 
 bool Board::isKingInCheck(Color kingColor) {
     uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
-    return areSquaresAttacked(kingSquare, kingColor);
+    Color opponentColor = (kingColor == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return areSquaresAttacked(kingSquare, opponentColor);
 }
 
 bool Board::move(Square start, Square end) {

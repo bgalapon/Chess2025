@@ -26,6 +26,20 @@ enum class Square : uint64_t {
     A8 = 1ULL << 56, B8 = 1ULL << 57, C8 = 1ULL << 58, D8 = 1ULL << 59, E8 = 1ULL << 60, F8 = 1ULL << 61, G8 = 1ULL << 62, H8 = 1ULL << 63
 };
 
+// --- Operator Overloads for Square ---
+
+// Bitwise OR
+// Combines two squares into a single bitboard
+inline uint64_t operator|(Square a, Square b) {
+    return static_cast<uint64_t>(a) | static_cast<uint64_t>(b);
+}
+
+// Bitwise AND
+// Checks if a square exists within a bitboard
+inline uint64_t operator&(Square a, Square b) {
+    return static_cast<uint64_t>(a) & static_cast<uint64_t>(b);
+}
+
 class Board {
 public:
     Board();
@@ -83,12 +97,12 @@ public:
 
     Color getSideToMove();
 
+    bool areSquaresAttacked(uint64_t squares, Color kingColor);
 private:
     // Internal helper functions
     bool applyMove(Square start, Square end);
     bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces);
     bool isKingInCheck(Color kingColor);
-    bool areSquaresAttacked(uint64_t squares, Color kingColor);
     uint64_t getPawnAttacks(Color side, uint64_t pawns);
     uint64_t getKnightAttacks(uint64_t knights);
     uint64_t getKingAttacks(uint64_t king);
