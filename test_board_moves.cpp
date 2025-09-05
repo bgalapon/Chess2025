@@ -14,7 +14,7 @@ TEST_CASE("Board::move", "[move]") {
         REQUIRE(board->getSideToMove() == Color::BLACK);
         REQUIRE(board->getWhitePawns() == 0x000000001000EF00ULL);
         // The en passant square should be set to the square behind the pawn's destination.
-        REQUIRE(board->getEnPassent() == 0x0000000000200000ULL);
+        REQUIRE(board->getEnPassent() == static_cast<uint64_t>(Square::E3));
     }
 
     SECTION("Illegal pawn move is not allowed") {
