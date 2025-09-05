@@ -1,7 +1,7 @@
 # BUILD.bazel file for the Chess2025 directory.
 
 # Load the C++ rules from Bazel's standard library.
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 # A C++ library target for the chess board implementation.
 # This compiles the source and header files into a library.
@@ -20,5 +20,15 @@ cc_test(
     deps = [
         ":board_lib",
         "@catch2//:catch2_main",
+    ],
+)
+
+# The main application binary.
+# This target compiles main.cpp and links it with the board library.
+cc_binary(
+    name = "main",
+    srcs = ["main.cpp"],
+    deps = [
+        ":board_lib",
     ],
 )

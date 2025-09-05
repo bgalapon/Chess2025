@@ -393,3 +393,23 @@ BoardBuilder& BoardBuilder::setWhiteCastleKingside(bool canCastle) { board->setW
 BoardBuilder& BoardBuilder::setWhiteCastleQueenside(bool canCastle) { board->setWhiteCastleQueenside(canCastle); return *this; }
 BoardBuilder& BoardBuilder::setEnPassent(uint64_t enPassent) { board->setEnPassent(enPassent); return *this; }
 std::unique_ptr<Board> BoardBuilder::Build() { return std::move(board); }
+
+std::unique_ptr<Board> StandardBoard() {
+    BoardBuilder boardBuilder(Square::E8, Square::E1, Color::WHITE);
+    return boardBuilder
+        .setWhitePawns(RANK_2)
+        .setWhiteRooks(static_cast<uint64_t>(Square::A1) | static_cast<uint64_t>(Square::H1))
+        .setWhiteKnights(static_cast<uint64_t>(Square::B1) | static_cast<uint64_t>(Square::G1))
+        .setWhiteBishops(static_cast<uint64_t>(Square::C1) | static_cast<uint64_t>(Square::F1))
+        .setWhiteQueens(static_cast<uint64_t>(Square::D1))
+        .setWhiteCastleKingside(true)
+        .setWhiteCastleQueenside(true)
+        .setBlackPawns(RANK_7)
+        .setBlackRooks(static_cast<uint64_t>(Square::A8) | static_cast<uint64_t>(Square::H8))
+        .setBlackKnights(static_cast<uint64_t>(Square::B8) | static_cast<uint64_t>(Square::G8))
+        .setBlackBishops(static_cast<uint64_t>(Square::C8) | static_cast<uint64_t>(Square::F8))
+        .setBlackQueens(static_cast<uint64_t>(Square::D8))
+        .setBlackCastleKingside(true)
+        .setBlackCastleQueenside(true)
+        .Build();
+}

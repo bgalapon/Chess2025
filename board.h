@@ -121,4 +121,6 @@ private:
     std::unique_ptr<Board> board;
 };
 
+std::unique_ptr<Board> StandardBoard();
+
 #endif // BOARD_H
