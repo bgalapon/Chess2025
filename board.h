@@ -88,7 +88,7 @@ private:
     bool applyMove(Square start, Square end);
     bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces);
     bool isKingInCheck(Color kingColor);
-    bool isSquareAttacked(Square square, Color kingColor);
+    bool areSquaresAttacked(uint64_t squares, Color kingColor);
     uint64_t getPawnAttacks(Color side, uint64_t pawns);
     uint64_t getKnightAttacks(uint64_t knights);
     uint64_t getKingAttacks(uint64_t king);

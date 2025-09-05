@@ -127,7 +127,7 @@ bool Board::applyMove(Square start, Square end) {
     if (this->sideToMove == Color::WHITE) {
         if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
             uint64_t squaresToCheck = static_cast<uint64_t>(Square::E1) | static_cast<uint64_t>(Square::F1) | static_cast<uint64_t>(Square::G1);
-            if (isSquareAttacked(Square::E1, Color::WHITE) || isSquareAttacked(Square::F1, Color::WHITE) || isSquareAttacked(Square::G1, Color::WHITE)) {
+            if (areSquaresAttacked(squaresToCheck, Color::WHITE)) {
                 return false;
             }
             if (!((friendlyPieces | enemyPieces) & WHITE_KINGSIDE_CASTLE_PATH)) {
@@ -139,7 +139,7 @@ bool Board::applyMove(Square start, Square end) {
         }
         else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
             uint64_t squaresToCheck = static_cast<uint64_t>(Square::E1) | static_cast<uint64_t>(Square::D1) | static_cast<uint64_t>(Square::C1);
-            if (isSquareAttacked(Square::E1, Color::WHITE) || isSquareAttacked(Square::D1, Color::WHITE) || isSquareAttacked(Square::C1, Color::WHITE)) {
+            if (areSquaresAttacked(squaresToCheck, Color::WHITE)) {
                 return false;
             }
             if (!((friendlyPieces | enemyPieces) & WHITE_QUEENSIDE_CASTLE_PATH)) {
@@ -152,7 +152,7 @@ bool Board::applyMove(Square start, Square end) {
     } else {
         if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
             uint64_t squaresToCheck = static_cast<uint64_t>(Square::E8) | static_cast<uint64_t>(Square::F8) | static_cast<uint64_t>(Square::G8);
-            if (isSquareAttacked(Square::E8, Color::BLACK) || isSquareAttacked(Square::F8, Color::BLACK) || isSquareAttacked(Square::G8, Color::BLACK)) {
+            if (areSquaresAttacked(squaresToCheck, Color::BLACK)) {
                 return false;
             }
             if (!((friendlyPieces | enemyPieces) & BLACK_KINGSIDE_CASTLE_PATH)) {
@@ -164,7 +164,7 @@ bool Board::applyMove(Square start, Square end) {
         }
         else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
             uint64_t squaresToCheck = static_cast<uint64_t>(Square::E8) | static_cast<uint64_t>(Square::D8) | static_cast<uint64_t>(Square::C8);
-            if (isSquareAttacked(Square::E8, Color::BLACK) || isSquareAttacked(Square::D8, Color::BLACK) || isSquareAttacked(Square::C8, Color::BLACK)) {
+            if (areSquaresAttacked(squaresToCheck, Color::BLACK)) {
                 return false;
             }
             if (!((friendlyPieces | enemyPieces) & BLACK_QUEENSIDE_CASTLE_PATH)) {
@@ -188,7 +188,7 @@ bool Board::applyMove(Square start, Square end) {
     if ((whitePawns & start_bit) || (blackPawns & start_bit)) {
         if (this->sideToMove == Color::WHITE) {
             if (end_bit == (start_bit << 8) && (allPieces & end_bit) == 0) {}
-            else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
+            else if ((start_bit & RANK_2) && (end_bit & RANK_4) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
                 isPawnDoubleStep = true; 
                 this->enPassent = start_bit << 8;
             }
@@ -199,7 +199,7 @@ bool Board::applyMove(Square start, Square end) {
             whitePawns |= end_bit;
         } else {
             if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {}
-            else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) { 
+            else if ((start_bit & RANK_7) && (end_bit & RANK_5) && (allPieces & (end_bit | (start_bit >> 8))) == 0) { 
                 isPawnDoubleStep = true;
                 this->enPassent = start_bit >> 8;
             }
@@ -359,8 +359,7 @@ uint64_t Board::getSlidingAttacks(uint64_t pieces, uint64_t allPieces, bool isRo
     return attacks;
 }
 
-bool Board::isSquareAttacked(Square square, Color kingColor) {
-    uint64_t square_bit = static_cast<uint64_t>(square);
+bool Board::areSquaresAttacked(uint64_t squares, Color kingColor) {
     uint64_t opponentPawns = (kingColor == Color::WHITE) ? blackPawns : whitePawns;
     uint64_t opponentKnights = (kingColor == Color::WHITE) ? blackKnights : whiteKnights;
     uint64_t opponentBishops = (kingColor == Color::WHITE) ? blackBishops : whiteBishops;
@@ -369,17 +368,17 @@ bool Board::isSquareAttacked(Square square, Color kingColor) {
     uint64_t opponentKing = (kingColor == Color::WHITE) ? blackKing : whiteKing;
     uint64_t allPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing |
                          whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
-    if ((getPawnAttacks(kingColor, opponentPawns) & square_bit) != 0) return true;
-    if ((getKnightAttacks(opponentKnights) & square_bit) != 0) return true;
-    if ((getKingAttacks(opponentKing) & square_bit) != 0) return true;
-    if ((getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true) & square_bit) != 0) return true;
-    if ((getSlidingAttacks(opponentBishops | opponentQueens, allPieces, false) & square_bit) != 0) return true;
+    if ((getPawnAttacks(kingColor, opponentPawns) & squares) != 0) return true;
+    if ((getKnightAttacks(opponentKnights) & squares) != 0) return true;
+    if ((getKingAttacks(opponentKing) & squares) != 0) return true;
+    if ((getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true) & squares) != 0) return true;
+    if ((getSlidingAttacks(opponentBishops | opponentQueens, allPieces, false) & squares) != 0) return true;
     return false;
 }
 
 bool Board::isKingInCheck(Color kingColor) {
-    Square kingSquare = (kingColor == Color::WHITE) ? static_cast<Square>(whiteKing) : static_cast<Square>(blackKing);
-    return isSquareAttacked(kingSquare, kingColor);
+    uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
+    return areSquaresAttacked(kingSquare, kingColor);
 }
 
 bool Board::move(Square start, Square end) {
