@@ -125,7 +125,7 @@ bool Board::applyMove(Square start, Square end) {
 
     // --- Handle Castling Moves First ---
     if (this->sideToMove == Color::WHITE) {
-        if ((whiteKing & start_bit) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
+        if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::H1)) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
             if (areSquaresAttacked(WHITE_KINGSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cerr << "white king castling kingside out of, into, or through check" << std::endl;
                 return false;
@@ -137,7 +137,7 @@ bool Board::applyMove(Square start, Square end) {
                 return true;
             }
         }
-        else if ((whiteKing & start_bit) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
+        else if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::A1)) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
             if (areSquaresAttacked(WHITE_QUEENSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cerr << "white king castling queenside out of, into, or through check" << std::endl;
                 return false;
@@ -150,7 +150,7 @@ bool Board::applyMove(Square start, Square end) {
             }
         }
     } else {
-        if ((blackKing & start_bit) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
+        if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::H8)) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
             if (areSquaresAttacked(BLACK_KINGSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cerr << "black king castling kingside out of, into, or through check" << std::endl;
                 return false;
@@ -162,7 +162,7 @@ bool Board::applyMove(Square start, Square end) {
                 return true;
             }
         }
-        else if ((blackKing & start_bit) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
+        else if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::A8)) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
             if (areSquaresAttacked(BLACK_QUEENSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cerr << "black king castling queenside out of, into, or through check" << std::endl;
                 return false;
