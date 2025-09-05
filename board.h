@@ -35,7 +35,7 @@ public:
     std::string toString() const;
     bool move(Square start, Square end);
 
-    // Setter methods for the builder pattern
+    // Setter methods
     void setBlackBishops(uint64_t squares);
     void setBlackKing(uint64_t square);
     void setBlackKnights(uint64_t squares);
@@ -58,6 +58,30 @@ public:
     void setEnPassent(uint64_t square);
 
     void setSideToMove(Color sideToMove);
+
+    // Getter methods
+    uint64_t getBlackBishops();
+    uint64_t getBlackKing();
+    uint64_t getBlackKnights();
+    uint64_t getBlackPawns();
+    uint64_t getBlackQueens();
+    uint64_t getBlackRooks();
+
+    uint64_t getWhiteBishops();
+    uint64_t getWhiteKing();
+    uint64_t getWhiteKnights();
+    uint64_t getWhitePawns();
+    uint64_t getWhiteQueens();
+    uint64_t getWhiteRooks();
+
+    bool getBlackCastleKingside();
+    bool getBlackCastleQueenside();
+    bool getWhiteCastleKingside();
+    bool getWhiteCastleQueenside();
+    
+    uint64_t getEnPassent();
+
+    Color getSideToMove();
 
 private:
     // Internal helper functions

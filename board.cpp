@@ -60,6 +60,30 @@ void Board::setWhiteCastleQueenside(bool canCastle) { this->whiteCastleQueenside
 void Board::setEnPassent(uint64_t square) { this->enPassent = square; }
 void Board::setSideToMove(Color sideToMove) { this->sideToMove = sideToMove; }
 
+ // Getter methods
+uint64_t Board::getBlackBishops() { return this->blackBishops; }
+uint64_t Board::getBlackKing() { return this->blackKing; }
+uint64_t Board::getBlackKnights() { return this->blackKnights; }
+uint64_t Board::getBlackPawns() { return this->blackPawns; }
+uint64_t Board::getBlackQueens() { return this->blackQueens; }
+uint64_t Board::getBlackRooks() { return this->blackRooks; }
+
+uint64_t Board::getWhiteBishops() { return this->whiteBishops; }
+uint64_t Board::getWhiteKing() { return this->whiteKing; }
+uint64_t Board::getWhiteKnights() { return this->whiteKnights; }
+uint64_t Board::getWhitePawns() { return this->whitePawns; }
+uint64_t Board::getWhiteQueens(){ return this->whiteQueens; } 
+uint64_t Board::getWhiteRooks() { return this->whiteRooks; }
+
+bool Board::getBlackCastleKingside() { return this->blackCastleKingside; }
+bool Board::getBlackCastleQueenside() { return this->blackCastleQueenside; }
+bool Board::getWhiteCastleKingside() { return this->whiteCastleKingside; }
+bool Board::getWhiteCastleQueenside() { return this->whiteCastleQueenside; }
+
+uint64_t Board::getEnPassent() { return this->enPassent; }
+
+Color Board::getSideToMove() { return this->sideToMove; }
+
 std::string Board::toString() const {
     std::string result = "";
     for (int rank = 7; rank >= 0; --rank) {
@@ -392,6 +416,7 @@ BoardBuilder& BoardBuilder::setBlackCastleQueenside(bool canCastle) { board->set
 BoardBuilder& BoardBuilder::setWhiteCastleKingside(bool canCastle) { board->setWhiteCastleKingside(canCastle); return *this; }
 BoardBuilder& BoardBuilder::setWhiteCastleQueenside(bool canCastle) { board->setWhiteCastleQueenside(canCastle); return *this; }
 BoardBuilder& BoardBuilder::setEnPassent(uint64_t enPassent) { board->setEnPassent(enPassent); return *this; }
+
 std::unique_ptr<Board> BoardBuilder::Build() { return std::move(board); }
 
 std::unique_ptr<Board> StandardBoard() {

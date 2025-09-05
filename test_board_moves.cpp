@@ -4,41 +4,96 @@
 #include <iostream>
 #include <memory>
 
-TEST_CASE("Pawn Moves", "[move][pawn]") {
-    BoardBuilder builder(Square::E8, Square::E1, Color::WHITE);
-    auto board = builder.setWhitePawns(static_cast<uint64_t>(Square::D2)).Build();
-    REQUIRE(board->move(Square::D2, Square::D3) == true);
-    REQUIRE(board->move(Square::D3, Square::D4) == false);
-}
+// Use a TEST_CASE with sections for related tests.
+TEST_CASE("Board::move", "[move]") {
+    // Setup a standard board for each section.
+    auto board = StandardBoard();
 
-TEST_CASE("Invalid Moves", "[move][invalid]") {
-    BoardBuilder builder(Square::E8, Square::E1, Color::WHITE);
-    auto board = builder.setWhitePawns(static_cast<uint64_t>(Square::A2)).Build();
-    REQUIRE(board->move(Square::A3, Square::A4) == false);
-    REQUIRE(board->move(Square::H4, Square::A2) == false);
-}
+    SECTION("Pawn Double Step is a legal move") {
+        REQUIRE(board->move(Square::E2, Square::E4));
+        REQUIRE(board->getSideToMove() == Color::BLACK);
+        REQUIRE(board->getWhitePawns() == 0x000000000040FF00ULL);
+        // The en passant square should be set to the square behind the pawn's destination.
+        REQUIRE(board->getEnPassent() == 0x0000000000200000ULL);
+    }
 
-TEST_CASE("King in Check", "[move][check]") {
-    BoardBuilder builder(Square::E8, Square::E1, Color::WHITE);
-    auto board = builder.setBlackRooks(static_cast<uint64_t>(Square::E5)).Build();
-    REQUIRE(board->move(Square::E1, Square::D1) == false);
+    SECTION("Illegal pawn move is not allowed") {
+        REQUIRE_FALSE(board->move(Square::E2, Square::E5));
+        REQUIRE(board->getSideToMove() == Color::WHITE);
+    }
+
+    SECTION("Knight move is a legal move") {
+        REQUIRE(board->move(Square::B1, Square::C3));
+        REQUIRE(board->getSideToMove() == Color::BLACK);
+        REQUIRE(board->getWhiteKnights() == (static_cast<uint64_t>(Square::C3) | static_cast<uint64_t>(Square::G1)));
+    }
     
-    BoardBuilder builder2(Square::E8, Square::E1, Color::WHITE);
-    auto board2 = builder2.setBlackRooks(static_cast<uint64_t>(Square::H5)).setWhitePawns(static_cast<uint64_t>(Square::F2)).Build();
-    REQUIRE(board2->move(Square::F2, Square::F3) == true);
-}
+    SECTION("Move by the wrong side is not allowed") {
+        REQUIRE_FALSE(board->move(Square::E7, Square::E5));
+        REQUIRE(board->getSideToMove() == Color::WHITE);
+    }
 
-TEST_CASE("Castling", "[move][castling]") {
-    BoardBuilder builder(Square::E8, Square::E1, Color::WHITE);
-    auto board = builder.setWhiteRooks(static_cast<uint64_t>(Square::A1) | static_cast<uint64_t>(Square::H1))
-                       .setWhiteCastleKingside(true)
-                       .Build();
-    REQUIRE(board->move(Square::E1, Square::G1) == true);
-    
-    BoardBuilder builder2(Square::E8, Square::E1, Color::WHITE);
-    auto board2 = builder2.setWhiteRooks(static_cast<uint64_t>(Square::A1) | static_cast<uint64_t>(Square::H1))
-                        .setWhiteKnights(static_cast<uint64_t>(Square::F1))
-                        .setWhiteCastleKingside(true)
-                        .Build();
-    REQUIRE(board2->move(Square::E1, Square::G1) == false);
+    SECTION("Pawn capture is a legal move") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
+            .setWhitePawns(static_cast<uint64_t>(Square::E4))
+            .setBlackPawns(static_cast<uint64_t>(Square::D5))
+            .Build();
+        
+        REQUIRE(customBoard->move(Square::E4, Square::D5));
+        REQUIRE(customBoard->getSideToMove() == Color::BLACK);
+        REQUIRE(customBoard->getWhitePawns() == static_cast<uint64_t>(Square::D5));
+        REQUIRE(customBoard->getBlackPawns() == 0ULL);
+    }
+
+    SECTION("En passant capture is a legal move") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::BLACK)
+            .setWhitePawns(static_cast<uint64_t>(Square::E4))
+            .setBlackPawns(static_cast<uint64_t>(Square::D4))
+            .setEnPassent(static_cast<uint64_t>(Square::E3))
+            .Build();
+            
+        REQUIRE(customBoard->move(Square::D4, Square::E3));
+        REQUIRE(customBoard->getSideToMove() == Color::WHITE);
+        REQUIRE(customBoard->getBlackPawns() == static_cast<uint64_t>(Square::E3));
+        REQUIRE(customBoard->getWhitePawns() == 0ULL);
+    }
+
+    SECTION("White kingside castling is a legal move") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
+            .setWhiteRooks(static_cast<uint64_t>(Square::H1))
+            .setWhiteCastleKingside(true)
+            .Build();
+
+        REQUIRE(customBoard->move(Square::E1, Square::G1));
+        REQUIRE(customBoard->getWhiteKing() == static_cast<uint64_t>(Square::G1));
+        REQUIRE(customBoard->getWhiteRooks() == static_cast<uint64_t>(Square::F1));
+    }
+
+    SECTION("Castling is not allowed if a square in the path is attacked") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
+            .setWhiteRooks(static_cast<uint64_t>(Square::H1))
+            .setBlackRooks(static_cast<uint64_t>(Square::F2))
+            .setWhiteCastleKingside(true)
+            .Build();
+
+        REQUIRE_FALSE(customBoard->move(Square::E1, Square::G1));
+    }
+
+    SECTION("Illegal move that leaves the king in check is not allowed") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
+            .setWhitePawns(static_cast<uint64_t>(Square::E2))
+            .setBlackRooks(static_cast<uint64_t>(Square::E8))
+            .Build();
+        
+        REQUIRE_FALSE(customBoard->move(Square::E2, Square::E4));
+    }
+
+    SECTION("Sliding piece cannot jump over another piece") {
+        auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
+            .setWhiteRooks(static_cast<uint64_t>(Square::A1))
+            .setWhiteKnights(static_cast<uint64_t>(Square::A2))
+            .Build();
+        
+        REQUIRE_FALSE(customBoard->move(Square::A1, Square::A3));
+    }
 }
