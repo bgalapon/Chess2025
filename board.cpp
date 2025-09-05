@@ -188,7 +188,10 @@ bool Board::applyMove(Square start, Square end) {
     if ((whitePawns & start_bit) || (blackPawns & start_bit)) {
         if (this->sideToMove == Color::WHITE) {
             if (end_bit == (start_bit << 8) && (allPieces & end_bit) == 0) {}
-            else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) { isPawnDoubleStep = true; }
+            else if ((start_bit & RANK_2) && end_bit == (start_bit << 16) && (allPieces & (end_bit | (start_bit << 8))) == 0) {
+                isPawnDoubleStep = true; 
+                this->enPassent = start_bit << 8;
+            }
             else if ((end_bit == (start_bit << 7) || end_bit == (start_bit << 9)) && (enemyPieces & end_bit)) {}
             else if (end_bit == this->enPassent) { blackPawns &= ~(end_bit >> 8); }
             else { return false; }
@@ -196,7 +199,10 @@ bool Board::applyMove(Square start, Square end) {
             whitePawns |= end_bit;
         } else {
             if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {}
-            else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) { isPawnDoubleStep = true; }
+            else if ((start_bit & RANK_7) && end_bit == (start_bit >> 16) && (allPieces & (end_bit | (start_bit >> 8))) == 0) { 
+                isPawnDoubleStep = true;
+                this->enPassent = start_bit >> 8;
+            }
             else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {}
             else if (end_bit == this->enPassent) { whitePawns &= ~(end_bit << 8); }
             else { return false; }

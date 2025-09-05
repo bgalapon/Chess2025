@@ -12,7 +12,7 @@ TEST_CASE("Board::move", "[move]") {
     SECTION("Pawn Double Step is a legal move") {
         REQUIRE(board->move(Square::E2, Square::E4));
         REQUIRE(board->getSideToMove() == Color::BLACK);
-        REQUIRE(board->getWhitePawns() == 0x000000000040FF00ULL);
+        REQUIRE(board->getWhitePawns() == 0x000000001000EF00ULL);
         // The en passant square should be set to the square behind the pawn's destination.
         REQUIRE(board->getEnPassent() == 0x0000000000200000ULL);
     }
