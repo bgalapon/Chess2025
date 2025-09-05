@@ -82,8 +82,10 @@ TEST_CASE("Board::move", "[move]") {
     SECTION("Illegal move that leaves the king in check is not allowed") {
         auto customBoard = BoardBuilder(Square::E8, Square::E1, Color::WHITE)
             .setWhitePawns(static_cast<uint64_t>(Square::E2))
-            .setBlackRooks(static_cast<uint64_t>(Square::E8))
+            .setBlackRooks(static_cast<uint64_t>(Square::H1))
             .Build();
+
+        std::cout << customBoard->toString() << std::endl;
         
         REQUIRE_FALSE(customBoard->move(Square::E2, Square::E4));
     }
