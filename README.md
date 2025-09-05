@@ -3,5 +3,7 @@
 ## Run
 
 ```bash
->$ g++ main.cpp -std=c++14 -o /tmp/chess2025 && /tmp/chess2025
+>$ bazel run //:main
+
+>$ bazel run //:test_board_moves
 ```
