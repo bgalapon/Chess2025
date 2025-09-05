@@ -293,8 +293,8 @@ bool Board::isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces
 }
 
 uint64_t Board::getPawnAttacks(Color side, uint64_t pawns) {
-    if (side == Color::WHITE) return (pawns << 7) & ~file_masks[7] | (pawns << 9) & ~file_masks[0];
-    else return (pawns >> 7) & ~file_masks[0] | (pawns >> 9) & ~file_masks[7];
+    if (side == Color::WHITE) return ((pawns << 7) & ~file_masks[7]) | ((pawns << 9) & ~file_masks[0]);
+    else return ((pawns >> 7) & ~file_masks[0]) | ((pawns >> 9) & ~file_masks[7]);
 }
 
 uint64_t Board::getKnightAttacks(uint64_t knights) {
