@@ -404,6 +404,147 @@ bool Board::move(Square start, Square end) {
     return false;
 }
 
+bool Board::isKingInCheckmate(Color kingColor) {
+    // 1. First, check if the king is even in check. If not, it can't be checkmate.
+    Color opponentColor = (kingColor == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
+
+    if (!isKingInCheck(kingColor)) {
+        return false;
+    }
+
+    // 2. Generate and check all possible king moves.
+    // This is the fastest way to get out of check.
+    uint64_t kingAttacks = getKingAttacks(kingSquare);
+    uint64_t friendlyPieces = (kingColor == Color::WHITE) ? 
+        (whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) :
+        (blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing);
+    uint64_t kingLegalMoves = kingAttacks & ~friendlyPieces;
+    
+    while (kingLegalMoves) {
+        uint64_t end_bit = kingLegalMoves & -kingLegalMoves;
+        Board tempBoard = *this;
+        if (tempBoard.applyMove(static_cast<Square>(kingSquare), static_cast<Square>(end_bit))) {
+            if (!tempBoard.isKingInCheck(kingColor)) {
+                return false; // King can move to a safe square
+            }
+        }
+        kingLegalMoves &= kingLegalMoves - 1;
+    }
+    
+    // 3. Find the attacking piece(s).
+    // Note: This logic assumes a single check. Handling double checks is a special case.
+    uint64_t checkers = 0;
+    
+    uint64_t opponentPawns = (opponentColor == Color::BLACK) ? blackPawns : whitePawns;
+    uint64_t opponentKnights = (opponentColor == Color::BLACK) ? blackKnights : whiteKnights;
+    uint64_t opponentBishops = (opponentColor == Color::BLACK) ? blackBishops : whiteBishops;
+    uint64_t opponentRooks = (opponentColor == Color::BLACK) ? blackRooks : whiteRooks;
+    uint64_t opponentQueens = (opponentColor == Color::BLACK) ? blackQueens : whiteQueens;
+    uint64_t allPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing |
+                         whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
+
+    // Check for pawn attacks
+    if (opponentColor == Color::BLACK) {
+        checkers |= ((kingSquare << 7) & ~file_masks[7]) & opponentPawns;
+        checkers |= ((kingSquare << 9) & ~file_masks[0]) & opponentPawns;
+    } else {
+        checkers |= ((kingSquare >> 7) & ~file_masks[0]) & opponentPawns;
+        checkers |= ((kingSquare >> 9) & ~file_masks[7]) & opponentPawns;
+    }
+
+    // Check for knight attacks
+    if (getKnightAttacks(opponentKnights) & kingSquare) {
+        checkers |= getKnightAttacks(kingSquare) & opponentKnights;
+    }
+
+    // Check for rook/queen attacks
+    if (getSlidingAttacks(opponentRooks | opponentQueens, allPieces, true) & kingSquare) {
+        checkers |= getSlidingAttacks(kingSquare, allPieces, true) & (opponentRooks | opponentQueens);
+    }
+    
+    // Check for bishop/queen attacks
+    if (getSlidingAttacks(opponentBishops | opponentQueens, allPieces, false) & kingSquare) {
+        checkers |= getSlidingAttacks(kingSquare, allPieces, false) & (opponentBishops | opponentQueens);
+    }
+    // Don't check for king-on-king attacks, as they are not legal.
+
+    // If there is more than one checking piece, it's a double check.
+    // In a double check, the only way out is to move the king. Since we
+    // already checked all king moves above, if we're here, it's checkmate.
+    if (__builtin_popcountll(checkers) > 1) {
+        return true;
+    }
+
+    uint64_t checker_square = checkers;
+
+    // 4. Check for captures of the checking piece.
+    // Iterate through all friendly pieces (except the king) to see if they can capture the checker.
+    uint64_t friendlyPiecesExceptKing = friendlyPieces & ~kingSquare;
+    
+    while(friendlyPiecesExceptKing) {
+        uint64_t start_bit = friendlyPiecesExceptKing & -friendlyPiecesExceptKing;
+        Board tempBoard = *this;
+        // The applyMove function should handle the capture
+        if (tempBoard.applyMove(static_cast<Square>(start_bit), static_cast<Square>(checker_square))) {
+            if (!tempBoard.isKingInCheck(kingColor)) {
+                return false; // Found a legal capture
+            }
+        }
+        friendlyPiecesExceptKing &= friendlyPiecesExceptKing - 1;
+    }
+    
+    // 5. Check for blocks if the checker is a sliding piece.
+    if (!((blackKnights | whiteKnights | blackPawns | whitePawns) & checker_square)) {
+        // Only sliding pieces can be blocked.
+        uint64_t path = 0;
+        uint8_t start_index = getSquareIndex(checker_square);
+        uint8_t end_index = getSquareIndex(kingSquare);
+        
+        // This is a rough-and-ready way to get the path. A robust implementation
+        // would have precomputed tables or better pathfinding.
+        if (start_index / 8 == end_index / 8) { // Horizontal
+            path = ((1ULL << std::max(start_index, end_index)) - 1) ^ ((1ULL << std::min(start_index, end_index)) - 1);
+            path &= ~(kingSquare | checker_square);
+        } else if (start_index % 8 == end_index % 8) { // Vertical
+            uint64_t start_file = file_masks[start_index % 8];
+            path = ((start_file << std::min(start_index, end_index)) - 1) & ~((start_file << std::max(start_index, end_index)) - 1);
+            path &= ~(kingSquare | checker_square);
+        } else { // Diagonal
+            int step = (start_index < end_index) ? 
+                ( (start_index % 8 < end_index % 8) ? 9 : 7 ) :
+                ( (start_index % 8 < end_index % 8) ? -7 : -9 );
+            for (int i = start_index + step; i != end_index; i += step) {
+                path |= (1ULL << i);
+            }
+        }
+
+        uint64_t friendlyBlockers = (kingColor == Color::WHITE) ?
+            (whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens) :
+            (blackPawns | blackKnights | blackBishops | blackRooks | blackQueens);
+
+        while(friendlyBlockers) {
+            uint64_t start_bit = friendlyBlockers & -friendlyBlockers;
+            uint64_t end_squares = path & ~friendlyPieces;
+            
+            while(end_squares) {
+                uint64_t end_bit = end_squares & -end_squares;
+                Board tempBoard = *this;
+                if (tempBoard.applyMove(static_cast<Square>(start_bit), static_cast<Square>(end_bit))) {
+                    if (!tempBoard.isKingInCheck(kingColor)) {
+                        return false; // Found a legal block
+                    }
+                }
+                end_squares &= end_squares - 1;
+            }
+            friendlyBlockers &= friendlyBlockers - 1;
+        }
+    }
+    
+    // If we've reached this point, no legal moves were found to get out of check.
+    return true;
+}
+
 // BoardBuilder class implementations
 BoardBuilder::BoardBuilder(Square blackKingSquare, Square whiteKingSquare, Color sideToMove) : board(std::make_unique<Board>()) {
     board->setBlackKing(static_cast<uint64_t>(blackKingSquare));

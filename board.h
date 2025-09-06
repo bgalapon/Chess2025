@@ -102,6 +102,7 @@ private:
     // Internal helper functions
     bool applyMove(Square start, Square end);
     bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces);
+    bool isKingInCheckmate(Color kingColor);
     bool isKingInCheck(Color kingColor);
     uint64_t getPawnAttacks(Color side, uint64_t pawns);
     uint64_t getKnightAttacks(uint64_t knights);
