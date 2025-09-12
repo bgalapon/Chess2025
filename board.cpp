@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <vector>
 
 // Helper function to get the index (0-63) from a single-bit bitboard
 inline uint8_t getSquareIndex(uint64_t bitboard) {
@@ -543,6 +544,208 @@ bool Board::isKingInCheckmate(Color kingColor) {
     
     // If we've reached this point, no legal moves were found to get out of check.
     return true;
+}
+
+std::vector<Move> Board::generatePseudoLegalMoves() {
+    std::vector<Move> pseudo_legal_moves;
+    
+    // Generate all pseudo-legal moves for the current side
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generatePawnMoves().begin(), generatePawnMoves().end());
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateKnightMoves().begin(), generateKnightMoves().end());
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateBishopMoves().begin(), generateBishopMoves().end());
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateRookMoves().begin(), generateRookMoves().end());
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateQueenMoves().begin(), generateQueenMoves().end());
+    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateKingMoves().begin(), generateKingMoves().end());
+
+    return pseudo_legal_moves;
+}
+
+// --- Move Generation Helper Functions ---
+std::vector<Move> Board::generatePawnMoves() {
+    std::vector<Move> moves;
+    uint64_t pawns = (sideToMove == Color::WHITE) ? whitePawns : blackPawns;
+    uint64_t allPieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing |
+                         blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+    
+    while (pawns) {
+        uint64_t start_bit = pawns & -pawns;
+        Square start = static_cast<Square>(getSquareIndex(start_bit));
+
+        if (sideToMove == Color::WHITE) {
+            // Single push
+            uint64_t end_bit = start_bit << 8;
+            if (!(allPieces & end_bit)) moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            // Double push
+            end_bit = start_bit << 16;
+            if ((start_bit & RANK_2) && !(allPieces & (start_bit << 8)) && !(allPieces & end_bit))
+                moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            // Captures
+            uint64_t capture1 = (start_bit << 7) & ~file_masks[7];
+            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture1)
+                moves.push_back({start, static_cast<Square>(getSquareIndex(capture1))});
+            uint64_t capture2 = (start_bit << 9) & ~file_masks[0];
+            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture2)
+                moves.push_back({start, static_cast<Square>(getSquareIndex(capture2))});
+            // En Passant
+            if (enPassent && (capture1 == enPassent || capture2 == enPassent))
+                moves.push_back({start, static_cast<Square>(getSquareIndex(enPassent))});
+        } else { // Black
+            // Single push
+            uint64_t end_bit = start_bit >> 8;
+            if (!(allPieces & end_bit)) moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            // Double push
+            end_bit = start_bit >> 16;
+            if ((start_bit & RANK_7) && !(allPieces & (start_bit >> 8)) && !(allPieces & end_bit))
+                moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            // Captures
+            uint64_t capture1 = (start_bit >> 7) & ~file_masks[0];
+            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture1)
+                moves.push_back({start, static_cast<Square>(getSquareIndex(capture1))});
+            uint64_t capture2 = (start_bit >> 9) & ~file_masks[7];
+            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2)
+                moves.push_back({start, static_cast<Square>(getSquareIndex(capture2))});
+            // En Passant
+            if (enPassent && (capture1 == enPassent || capture2 == enPassent))
+                moves.push_back({start, static_cast<Square>(getSquareIndex(enPassent))});
+        }
+        pawns &= pawns - 1;
+    }
+    return moves;
+}
+
+std::vector<Move> Board::generateKnightMoves() {
+    std::vector<Move> moves;
+    uint64_t knights = (sideToMove == Color::WHITE) ? whiteKnights : blackKnights;
+    uint64_t friendlyPieces = (sideToMove == Color::WHITE) ? (whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing) : (blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing);
+    while (knights) {
+        uint64_t start_bit = knights & -knights;
+        uint64_t attacks = getKnightAttacks(start_bit);
+        uint64_t valid_moves = attacks & ~friendlyPieces;
+        while(valid_moves) {
+            uint64_t end_bit = valid_moves & -valid_moves;
+            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            valid_moves &= valid_moves - 1;
+        }
+        knights &= knights - 1;
+    }
+    return moves;
+}
+
+std::vector<Move> Board::generateBishopMoves() {
+    std::vector<Move> moves;
+    uint64_t bishops = (sideToMove == Color::WHITE) ? whiteBishops : blackBishops;
+    uint64_t allPieces = whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing |
+                         blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing;
+    uint64_t friendlyPieces = (sideToMove == Color::WHITE) ? (whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing) : (blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing);
+    
+    while (bishops) {
+        uint64_t start_bit = bishops & -bishops;
+        uint64_t attacks = getSlidingAttacks(start_bit, allPieces, false);
+        uint64_t valid_moves = attacks & ~friendlyPieces;
+        while(valid_moves) {
+            uint64_t end_bit = valid_moves & -valid_moves;
+            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            valid_moves &= valid_moves - 1;
+        }
+        bishops &= bishops - 1;
+    }
+    return moves;
+}
+
+std::vector<Move> Board::generateRookMoves() {
+    std::vector<Move> moves;
+    uint64_t rooks = (sideToMove == Color::WHITE) ? whiteRooks : blackRooks;
+    uint64_t allPieces = whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing |
+                         blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing;
+    uint64_t friendlyPieces = (sideToMove == Color::WHITE) ? (whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing) : (blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing);
+    
+    while (rooks) {
+        uint64_t start_bit = rooks & -rooks;
+        uint64_t attacks = getSlidingAttacks(start_bit, allPieces, true);
+        uint64_t valid_moves = attacks & ~friendlyPieces;
+        while(valid_moves) {
+            uint64_t end_bit = valid_moves & -valid_moves;
+            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            valid_moves &= valid_moves - 1;
+        }
+        rooks &= rooks - 1;
+    }
+    return moves;
+}
+
+std::vector<Move> Board::generateQueenMoves() {
+    std::vector<Move> moves;
+    uint64_t queens = (sideToMove == Color::WHITE) ? whiteQueens : blackQueens;
+    uint64_t allPieces = whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing |
+                         blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing;
+    uint64_t friendlyPieces = (sideToMove == Color::WHITE) ? (whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing) : (blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing);
+    
+    while (queens) {
+        uint64_t start_bit = queens & -queens;
+        uint64_t attacks = getSlidingAttacks(start_bit, allPieces, true) | getSlidingAttacks(start_bit, allPieces, false);
+        uint64_t valid_moves = attacks & ~friendlyPieces;
+        while(valid_moves) {
+            uint64_t end_bit = valid_moves & -valid_moves;
+            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            valid_moves &= valid_moves - 1;
+        }
+        queens &= queens - 1;
+    }
+    return moves;
+}
+
+std::vector<Move> Board::generateKingMoves() {
+    std::vector<Move> moves;
+    uint64_t king = (sideToMove == Color::WHITE) ? whiteKing : blackKing;
+    uint64_t friendlyPieces = (sideToMove == Color::WHITE) ? (whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing) : (blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing);
+    
+    uint64_t attacks = getKingAttacks(king);
+    uint64_t valid_moves = attacks & ~friendlyPieces;
+    while(valid_moves) {
+        uint64_t end_bit = valid_moves & -valid_moves;
+        moves.push_back({static_cast<Square>(getSquareIndex(king)), static_cast<Square>(getSquareIndex(end_bit))});
+        valid_moves &= valid_moves - 1;
+    }
+    // Castling
+    if (sideToMove == Color::WHITE) {
+        if (whiteCastleKingside && !((whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing) & WHITE_KINGSIDE_CASTLE_PATH))
+            moves.push_back({Square::E1, Square::G1});
+        if (whiteCastleQueenside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing) & WHITE_QUEENSIDE_CASTLE_PATH)
+            moves.push_back({Square::E1, Square::C1});
+    } else {
+        if (blackCastleKingside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_KINGSIDE_CASTLE_PATH)
+            moves.push_back({Square::E8, Square::G8});
+        if (blackCastleQueenside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_QUEENSIDE_CASTLE_PATH)
+            moves.push_back({Square::E8, Square::C8});
+    }
+    return moves;
+}
+
+/**
+ * @brief Generates all legal moves for the current side to move.
+ * @return A vector of valid Move structs.
+ */
+std::vector<Move> Board::generateLegalMoves() {
+    std::vector<Move> pseudo_legal_moves = generatePseudoLegalMoves();
+
+    std::vector<Move> legal_moves;
+    for (const Move& move : pseudo_legal_moves) {
+        if (this->isMoveLegal(move)) {
+            legal_moves.push_back(move);
+        }
+    }
+    
+    return legal_moves;
+}
+
+bool Board::isMoveLegal(Move move) {
+     Board tempBoard = *this;
+
+    if (!tempBoard.applyMove(move.start, move.end)) {
+        return false;
+    }
+
+    return !tempBoard.isKingInCheck(this->sideToMove);
 }
 
 // BoardBuilder class implementations

@@ -26,6 +26,12 @@ enum class Square : uint64_t {
     A8 = 1ULL << 56, B8 = 1ULL << 57, C8 = 1ULL << 58, D8 = 1ULL << 59, E8 = 1ULL << 60, F8 = 1ULL << 61, G8 = 1ULL << 62, H8 = 1ULL << 63
 };
 
+class Move {
+public:
+    Square start;
+    Square end;
+};
+
 // --- Operator Overloads for Square ---
 
 // Bitwise OR
@@ -98,6 +104,8 @@ public:
     Color getSideToMove();
 
     bool areSquaresAttacked(uint64_t squares, Color kingColor);
+    std::vector<Move> generateLegalMoves();
+    std::vector<Move> generatePseudoLegalMoves();
 private:
     // Internal helper functions
     bool applyMove(Square start, Square end);
@@ -108,6 +116,13 @@ private:
     uint64_t getKnightAttacks(uint64_t knights);
     uint64_t getKingAttacks(uint64_t king);
     uint64_t getSlidingAttacks(uint64_t pieces, uint64_t allPieces, bool isRook);
+    std::vector<Move> generatePawnMoves();
+    std::vector<Move> generateKnightMoves();
+    std::vector<Move> generateBishopMoves();
+    std::vector<Move> generateRookMoves();
+    std::vector<Move> generateQueenMoves();
+    std::vector<Move> generateKingMoves();
+    bool isMoveLegal(Move move);
     
     // Private member variables (bitboards and state flags)
     uint64_t blackBishops;

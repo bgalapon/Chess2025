@@ -12,6 +12,16 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "player_lib",
+    srcs = ["random_player.cpp"],
+    hdrs = ["player.h"],
+    deps = [
+        ":board_lib",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 # A C++ test target that compiles and links the unit tests.
 # It depends on the board library and the external Catch2 library.
 cc_test(
