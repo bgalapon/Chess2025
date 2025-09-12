@@ -710,12 +710,12 @@ std::vector<Move> Board::generateKingMoves() {
     if (sideToMove == Color::WHITE) {
         if (whiteCastleKingside && !((whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing) & WHITE_KINGSIDE_CASTLE_PATH))
             moves.push_back({Square::E1, Square::G1});
-        if (whiteCastleQueenside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing) & WHITE_QUEENSIDE_CASTLE_PATH)
+        if (whiteCastleQueenside && !((whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens|blackKing) & WHITE_QUEENSIDE_CASTLE_PATH))
             moves.push_back({Square::E1, Square::C1});
     } else {
-        if (blackCastleKingside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_KINGSIDE_CASTLE_PATH)
+        if (blackCastleKingside && !((whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_KINGSIDE_CASTLE_PATH))
             moves.push_back({Square::E8, Square::G8});
-        if (blackCastleQueenside && !(whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_QUEENSIDE_CASTLE_PATH)
+        if (blackCastleQueenside && !((whitePawns|whiteKnights|whiteBishops|whiteRooks|whiteQueens|whiteKing|blackPawns|blackKnights|blackBishops|blackRooks|blackQueens) & BLACK_QUEENSIDE_CASTLE_PATH))
             moves.push_back({Square::E8, Square::C8});
     }
     return moves;
