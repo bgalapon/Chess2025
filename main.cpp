@@ -5,25 +5,50 @@
 #include <cmath> // For std::abs
 #include <vector> // For bitboard to index conversion
 #include "board.h"
+#include "player.h"
 
 int main() {
     std::unique_ptr<Board> board = StandardBoard();
-    std::cout << board->toString() << std::endl;
 
-    board->move(Square::E2, Square::E4);
-    std::cout << board->toString() << std::endl;
+    RandomPlayer whitePlayer;
+    RandomPlayer blackPlayer;
 
-    board->move(Square::D7, Square::D5);
+    std::cout << "Board:" << std::endl;
     std::cout << board->toString() << std::endl;
+    int turns = 0;
+    while (true) {
+        std::cout << "--------------------" << std::endl;
+        if (board->getSideToMove() == Color::WHITE) {
+            std::cout << "White's Turn" << std::endl;
+            if (!whitePlayer.makeMove(*board)) {
+                if (board->isKingInCheck(Color::WHITE)) {
+                    std::cout << "Checkmate! Black wins." << std::endl;
+                } else {
+                    std::cout << "Stalemate! Game is a draw." << std::endl;
+                }
+                break;
+            }
+        } else {
+            std::cout << "Black's Turn" << std::endl;
+            if (!blackPlayer.makeMove(*board)) {
+                if (board->isKingInCheck(Color::BLACK)) {
+                    std::cout << "Checkmate! White wins." << std::endl;
+                } else {
+                    std::cout << "Stalemate! Game is a draw." << std::endl;
+                }
+                break;
+            }
+        }
 
-    board->move(Square::E4, Square::D5);
-    std::cout << board->toString() << std::endl;
+        turns++;
+        // if (turns == 3) {
+        //     // TODO bgalapon delete this after testing
+        //     break;
+        // }
 
-    board->move(Square::C7, Square::C5);
-    std::cout << board->toString() << std::endl;
-
-    board->move(Square::D5, Square::C6);
-    std::cout << board->toString() << std::endl;
+        std::cout << "Board:" << std::endl;
+        std::cout << board->toString() << std::endl;
+    }
 
     return 0;
 }

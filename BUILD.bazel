@@ -40,5 +40,6 @@ cc_binary(
     srcs = ["main.cpp"],
     deps = [
         ":board_lib",
+        ":player_lib",
     ],
 )

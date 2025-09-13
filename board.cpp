@@ -10,6 +10,20 @@ inline uint8_t getSquareIndex(uint64_t bitboard) {
     return __builtin_ctzll(bitboard);
 }
 
+// Converts a Square enum value to its algebraic notation string.
+std::string toAlgebraicNotation(Square square) {
+    uint64_t square_bitboard = static_cast<uint64_t>(square);
+    int square_index = 63 - __builtin_clzll(square_bitboard);
+
+    int file = square_index % 8;
+    int rank = square_index / 8;
+
+    char file_char = 'A' + file;
+    char rank_char = '1' + rank;
+
+    return std::string(1, file_char) + std::string(1, rank_char);
+}
+
 // Bitboard masks for ranks for efficient checking
 const uint64_t RANK_2 = 0x000000000000FF00ULL;
 const uint64_t RANK_4 = 0x00000000FF000000ULL;
@@ -547,17 +561,32 @@ bool Board::isKingInCheckmate(Color kingColor) {
 }
 
 std::vector<Move> Board::generatePseudoLegalMoves() {
-    std::vector<Move> pseudo_legal_moves;
+    std::vector<Move> pseudoLegalMoves;
+
+    std::vector<Move> pawnMoves = generatePawnMoves();
+    // for (const Move& move : pawnMoves) {
+    //     std::cout << "pawn move (" << toAlgebraicNotation(move.start) << ", " << toAlgebraicNotation(move.end) << ")" << std::endl;
+    // }
+
+    std::vector<Move> knightMoves = generateKnightMoves();
+    // for (const Move& move : knightMoves) {
+    //     std::cout << "knight move (" << toAlgebraicNotation(move.start) << ", " << toAlgebraicNotation(move.end) << ")" << std::endl;
+    // }
+
+    std::vector<Move> bishopMoves = generateBishopMoves();
+    std::vector<Move> rookMoves = generateRookMoves();
+    std::vector<Move> queenMoves = generateQueenMoves();
+    std::vector<Move> kingMoves = generateKingMoves();
     
     // Generate all pseudo-legal moves for the current side
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generatePawnMoves().begin(), generatePawnMoves().end());
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateKnightMoves().begin(), generateKnightMoves().end());
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateBishopMoves().begin(), generateBishopMoves().end());
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateRookMoves().begin(), generateRookMoves().end());
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateQueenMoves().begin(), generateQueenMoves().end());
-    pseudo_legal_moves.insert(pseudo_legal_moves.end(), generateKingMoves().begin(), generateKingMoves().end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), pawnMoves.begin(), pawnMoves.end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), knightMoves.begin(), knightMoves.end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), bishopMoves.begin(), bishopMoves.end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), rookMoves.begin(), rookMoves.end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), queenMoves.begin(), queenMoves.end());
+    pseudoLegalMoves.insert(pseudoLegalMoves.end(), kingMoves.begin(), kingMoves.end());
 
-    return pseudo_legal_moves;
+    return pseudoLegalMoves;
 }
 
 // --- Move Generation Helper Functions ---
@@ -569,46 +598,64 @@ std::vector<Move> Board::generatePawnMoves() {
     
     while (pawns) {
         uint64_t start_bit = pawns & -pawns;
-        Square start = static_cast<Square>(getSquareIndex(start_bit));
+        Square start = static_cast<Square>(start_bit);
 
         if (sideToMove == Color::WHITE) {
             // Single push
             uint64_t end_bit = start_bit << 8;
-            if (!(allPieces & end_bit)) moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            if (!(allPieces & end_bit)) {
+                moves.push_back({start, static_cast<Square>(end_bit)});
+            }
+                
             // Double push
             end_bit = start_bit << 16;
-            if ((start_bit & RANK_2) && !(allPieces & (start_bit << 8)) && !(allPieces & end_bit))
-                moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            if ((start_bit & RANK_2) && !(allPieces & (start_bit << 8)) && !(allPieces & end_bit)) {
+                moves.push_back({start, static_cast<Square>(end_bit)});
+            }
+                
             // Captures
             uint64_t capture1 = (start_bit << 7) & ~file_masks[7];
-            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture1)
-                moves.push_back({start, static_cast<Square>(getSquareIndex(capture1))});
+            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture1) {
+                moves.push_back({start, static_cast<Square>(capture1)});
+            }
+                
             uint64_t capture2 = (start_bit << 9) & ~file_masks[0];
-            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture2)
-                moves.push_back({start, static_cast<Square>(getSquareIndex(capture2))});
+            if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture2) {
+                 moves.push_back({start, static_cast<Square>(capture2)});
+            }
+               
             // En Passant
-            if (enPassent && (capture1 == enPassent || capture2 == enPassent))
-                moves.push_back({start, static_cast<Square>(getSquareIndex(enPassent))});
+            if (enPassent && (capture1 == enPassent || capture2 == enPassent)) {
+                 moves.push_back({start, static_cast<Square>(enPassent)});
+            }
         } else { // Black
             // Single push
             uint64_t end_bit = start_bit >> 8;
-            if (!(allPieces & end_bit)) moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            if (!(allPieces & end_bit)) {
+                moves.push_back({start, static_cast<Square>(end_bit)});
+            }
             // Double push
             end_bit = start_bit >> 16;
-            if ((start_bit & RANK_7) && !(allPieces & (start_bit >> 8)) && !(allPieces & end_bit))
-                moves.push_back({start, static_cast<Square>(getSquareIndex(end_bit))});
+            if ((start_bit & RANK_7) && !(allPieces & (start_bit >> 8)) && !(allPieces & end_bit)) {
+                moves.push_back({start, static_cast<Square>(end_bit)});
+            }
+                
             // Captures
             uint64_t capture1 = (start_bit >> 7) & ~file_masks[0];
-            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture1)
-                moves.push_back({start, static_cast<Square>(getSquareIndex(capture1))});
+            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture1) {
+                moves.push_back({start, static_cast<Square>(capture1)});
+            }
             uint64_t capture2 = (start_bit >> 9) & ~file_masks[7];
-            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2)
-                moves.push_back({start, static_cast<Square>(getSquareIndex(capture2))});
+            if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2) {
+                moves.push_back({start, static_cast<Square>(capture2)});
+            }
+                
             // En Passant
-            if (enPassent && (capture1 == enPassent || capture2 == enPassent))
-                moves.push_back({start, static_cast<Square>(getSquareIndex(enPassent))});
+            if (enPassent && (capture1 == enPassent || capture2 == enPassent)) {
+                moves.push_back({start, static_cast<Square>(enPassent)});
+            }
         }
-        pawns &= pawns - 1;
+        pawns &= ~start_bit;
     }
     return moves;
 }
@@ -623,7 +670,7 @@ std::vector<Move> Board::generateKnightMoves() {
         uint64_t valid_moves = attacks & ~friendlyPieces;
         while(valid_moves) {
             uint64_t end_bit = valid_moves & -valid_moves;
-            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            moves.push_back({static_cast<Square>(start_bit), static_cast<Square>(end_bit)});
             valid_moves &= valid_moves - 1;
         }
         knights &= knights - 1;
@@ -644,7 +691,7 @@ std::vector<Move> Board::generateBishopMoves() {
         uint64_t valid_moves = attacks & ~friendlyPieces;
         while(valid_moves) {
             uint64_t end_bit = valid_moves & -valid_moves;
-            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            moves.push_back({static_cast<Square>(start_bit), static_cast<Square>(end_bit)});
             valid_moves &= valid_moves - 1;
         }
         bishops &= bishops - 1;
@@ -665,7 +712,7 @@ std::vector<Move> Board::generateRookMoves() {
         uint64_t valid_moves = attacks & ~friendlyPieces;
         while(valid_moves) {
             uint64_t end_bit = valid_moves & -valid_moves;
-            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            moves.push_back({static_cast<Square>(start_bit), static_cast<Square>(end_bit)});
             valid_moves &= valid_moves - 1;
         }
         rooks &= rooks - 1;
@@ -686,7 +733,7 @@ std::vector<Move> Board::generateQueenMoves() {
         uint64_t valid_moves = attacks & ~friendlyPieces;
         while(valid_moves) {
             uint64_t end_bit = valid_moves & -valid_moves;
-            moves.push_back({static_cast<Square>(getSquareIndex(start_bit)), static_cast<Square>(getSquareIndex(end_bit))});
+            moves.push_back({static_cast<Square>(start_bit), static_cast<Square>(end_bit)});
             valid_moves &= valid_moves - 1;
         }
         queens &= queens - 1;
@@ -703,7 +750,7 @@ std::vector<Move> Board::generateKingMoves() {
     uint64_t valid_moves = attacks & ~friendlyPieces;
     while(valid_moves) {
         uint64_t end_bit = valid_moves & -valid_moves;
-        moves.push_back({static_cast<Square>(getSquareIndex(king)), static_cast<Square>(getSquareIndex(end_bit))});
+        moves.push_back({static_cast<Square>(getSquareIndex(king)), static_cast<Square>(end_bit)});
         valid_moves &= valid_moves - 1;
     }
     // Castling
@@ -726,16 +773,16 @@ std::vector<Move> Board::generateKingMoves() {
  * @return A vector of valid Move structs.
  */
 std::vector<Move> Board::generateLegalMoves() {
-    std::vector<Move> pseudo_legal_moves = generatePseudoLegalMoves();
+    std::vector<Move> pseudoLegalMoves = generatePseudoLegalMoves();
 
-    std::vector<Move> legal_moves;
-    for (const Move& move : pseudo_legal_moves) {
+    std::vector<Move> legalMoves;
+    for (const Move& move : pseudoLegalMoves) {
         if (this->isMoveLegal(move)) {
-            legal_moves.push_back(move);
+            legalMoves.push_back(move);
         }
     }
     
-    return legal_moves;
+    return legalMoves;
 }
 
 bool Board::isMoveLegal(Move move) {

@@ -1,11 +1,7 @@
 #include "player.h"
+#include "board.h"
 #include <random>
-
-// RandomPlayer class that implements the Player interface
-class RandomPlayer : public Player {
-public:
-    bool makeMove(Board& board) override;
-};
+#include <iostream>
 
 bool RandomPlayer::makeMove(Board& board) {
     // 1. Generate all legal moves for the current side.
@@ -21,10 +17,9 @@ bool RandomPlayer::makeMove(Board& board) {
     std::mt19937 generator(seed);
     std::uniform_int_distribution<size_t> distribution(0, legal_moves.size() - 1);
     size_t random_index = distribution(generator);
-    Move chosen_move = legal_moves[random_index];
+    Move chosenMove = legal_moves[random_index];
+    std::cout << "Chosen move (" << toAlgebraicNotation(chosenMove.start) << ", " << toAlgebraicNotation(chosenMove.end) << ")" << std::endl;
 
     // 4. Apply the chosen move to the board.
-    board.move(chosen_move.start, chosen_move.end);
-    
-    return true;
+    return board.move(chosenMove.start, chosenMove.end);    
 }
