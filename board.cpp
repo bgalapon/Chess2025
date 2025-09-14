@@ -423,6 +423,10 @@ bool Board::isKingInCheck(Color kingColor) {
     return areSquaresAttacked(kingSquare, opponentColor);
 }
 
+void Board::setVerbose(bool verbose) {
+    this->verbose = verbose;
+}
+
 bool Board::move(Square start, Square end) {
     Board tempBoard = *this;
     if (!tempBoard.applyMove(start, end)) {

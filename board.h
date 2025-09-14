@@ -111,6 +111,7 @@ public:
     std::vector<Move> generatePseudoLegalMoves();
     bool isKingInCheckmate(Color kingColor);
     bool isKingInCheck(Color kingColor);
+    void setVerbose(bool verbose);
 private:
     // Internal helper functions
     bool applyMove(Square start, Square end);
@@ -145,6 +146,9 @@ private:
     bool blackCastleQueenside;
     bool whiteCastleKingside;
     bool whiteCastleQueenside;
+
+    bool verbose;
+
     uint64_t enPassent;
     Color sideToMove;
 };
