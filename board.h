@@ -29,10 +29,14 @@ enum class Square : uint64_t {
 // Converts a Square enum value to its algebraic notation string.
 std::string toAlgebraicNotation(Square square);
 
+// Enum to represent the type of piece a pawn can promote to.
+enum class PieceType { QUEEN, ROOK, KNIGHT, BISHOP };
+
 class Move {
 public:
     Square start;
     Square end;
+    PieceType promotionPiece = PieceType::QUEEN;
 };
 
 // --- Operator Overloads for Square ---
@@ -56,7 +60,7 @@ public:
     
     // Public member functions
     std::string toString() const;
-    bool move(Square start, Square end);
+    bool makeMove(Move move);
 
     // Setter methods
     void setBlackBishops(uint64_t squares);
@@ -115,7 +119,7 @@ public:
     void setVerbose(bool verbose);
 private:
     // Internal helper functions
-    bool applyMove(Square start, Square end);
+    bool applyMove(Move move);
     bool isPathClear(uint64_t start_bit, uint64_t end_bit, uint64_t allPieces);
     uint64_t getPawnAttacks(Color side, uint64_t pawns);
     uint64_t getKnightAttacks(uint64_t knights);

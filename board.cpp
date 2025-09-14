@@ -124,9 +124,9 @@ std::string Board::toString() const {
     return result;
 }
 
-bool Board::applyMove(Square start, Square end) {
-    uint64_t start_bit = static_cast<uint64_t>(start);
-    uint64_t end_bit = static_cast<uint64_t>(end);
+bool Board::applyMove(Move move) {
+    uint64_t start_bit = static_cast<uint64_t>(move.start);
+    uint64_t end_bit = static_cast<uint64_t>(move.end);
     
     uint64_t friendlyPieces, enemyPieces, allPieces;
     if (this->sideToMove == Color::WHITE) {
@@ -140,7 +140,7 @@ bool Board::applyMove(Square start, Square end) {
 
     // --- Handle Castling Moves First ---
     if (this->sideToMove == Color::WHITE) {
-        if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::H1)) && start == Square::E1 && end == Square::G1 && this->whiteCastleKingside) {
+        if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::H1)) && move.start == Square::E1 && move.end == Square::G1 && this->whiteCastleKingside) {
             if (areSquaresAttacked(WHITE_KINGSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cout << "white king castling kingside out of, into, or through check" << std::endl;
                 return false;
@@ -152,7 +152,7 @@ bool Board::applyMove(Square start, Square end) {
                 return true;
             }
         }
-        else if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::A1)) && start == Square::E1 && end == Square::C1 && this->whiteCastleQueenside) {
+        else if ((whiteKing & start_bit) && (whiteRooks & static_cast<uint64_t>(Square::A1)) && move.start == Square::E1 && move.end == Square::C1 && this->whiteCastleQueenside) {
             if (areSquaresAttacked(WHITE_QUEENSIDE_CASTLE_PATH, Color::BLACK)) {
                 std::cout << "white king castling queenside out of, into, or through check" << std::endl;
                 return false;
@@ -165,7 +165,7 @@ bool Board::applyMove(Square start, Square end) {
             }
         }
     } else {
-        if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::H8)) && start == Square::E8 && end == Square::G8 && this->blackCastleKingside) {
+        if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::H8)) && move.start == Square::E8 && move.end == Square::G8 && this->blackCastleKingside) {
             if (areSquaresAttacked(BLACK_KINGSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cout << "black king castling kingside out of, into, or through check" << std::endl;
                 return false;
@@ -177,7 +177,7 @@ bool Board::applyMove(Square start, Square end) {
                 return true;
             }
         }
-        else if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::A8)) && start == Square::E8 && end == Square::C8 && this->blackCastleQueenside) {
+        else if ((blackKing & start_bit) && (blackRooks & static_cast<uint64_t>(Square::A8)) && move.start == Square::E8 && move.end == Square::C8 && this->blackCastleQueenside) {
             if (areSquaresAttacked(BLACK_QUEENSIDE_CASTLE_PATH, Color::WHITE)) {
                 std::cout << "black king castling queenside out of, into, or through check" << std::endl;
                 return false;
@@ -220,7 +220,28 @@ bool Board::applyMove(Square start, Square end) {
                 return false; 
             }
             whitePawns &= ~start_bit;
-            whitePawns |= end_bit;
+
+            // Check for white pawn promotion
+            if ((end_bit & 0xFF00000000000000ULL) != 0) {
+                // Promote to the specified piece type
+                switch (move.promotionPiece) {
+                    case PieceType::QUEEN:
+                        whiteQueens |= end_bit;
+                        break;
+                    case PieceType::ROOK:
+                        whiteRooks |= end_bit;
+                        break;
+                    case PieceType::KNIGHT:
+                        whiteKnights |= end_bit;
+                        break;
+                    case PieceType::BISHOP:
+                        whiteBishops |= end_bit;
+                        break;
+                }
+            } else {
+                // Otherwise, place pawn on new square
+                whitePawns |= end_bit;
+            }
         } else {
             if (end_bit == (start_bit >> 8) && (allPieces & end_bit) == 0) {}
             else if ((start_bit & RANK_7) && (end_bit & RANK_5) && (allPieces & (end_bit | (start_bit >> 8))) == 0) { 
@@ -234,7 +255,28 @@ bool Board::applyMove(Square start, Square end) {
                 return false; 
             }
             blackPawns &= ~start_bit;
-            blackPawns |= end_bit;
+
+            // Check for black pawn promotion
+            if ((end_bit & 0x00000000000000FFULL) != 0) {
+                // Promote to the specified piece type
+                switch (move.promotionPiece) {
+                    case PieceType::QUEEN:
+                        blackQueens |= end_bit;
+                        break;
+                    case PieceType::ROOK:
+                        blackRooks |= end_bit;
+                        break;
+                    case PieceType::KNIGHT:
+                        blackKnights |= end_bit;
+                        break;
+                    case PieceType::BISHOP:
+                        blackBishops |= end_bit;
+                        break;
+                }
+            } else {
+                // Otherwise, place pawn on new square
+                blackPawns |= end_bit;
+            }
         }
     }
     else if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
@@ -477,9 +519,9 @@ bool Board::isInsufficientMaterial() {
     return false;
 }
 
-bool Board::move(Square start, Square end) {
+bool Board::makeMove(Move move) {
     Board tempBoard = *this;
-    if (!tempBoard.applyMove(start, end)) {
+    if (!tempBoard.applyMove(move)) {
         std::cout << "Error: Invalid move based on piece rules or board state." << std::endl;
         return false;
     }
@@ -487,7 +529,7 @@ bool Board::move(Square start, Square end) {
         std::cout << "Error: This move leaves the king in check. Move is illegal." << std::endl;
         return false;
     }
-    if (this->applyMove(start, end)) {
+    if (this->applyMove(move)) {
         if (this->sideToMove == Color::WHITE) this->sideToMove = Color::BLACK;
         else this->sideToMove = Color::WHITE;
         return true;
@@ -517,7 +559,7 @@ bool Board::isKingInCheckmate(Color kingColor) {
         uint64_t end_bit = kingLegalMoves & -kingLegalMoves;
         // std::cout << "Considering king move: " << toAlgebraicNotation(static_cast<Square>(kingSquare)) << " -> " << toAlgebraicNotation(static_cast<Square>(end_bit)) << std::endl;
         Board tempBoard = *this;
-        if (tempBoard.applyMove(static_cast<Square>(kingSquare), static_cast<Square>(end_bit))) {
+        if (tempBoard.applyMove({static_cast<Square>(kingSquare), static_cast<Square>(end_bit)})) {
             if (!tempBoard.isKingInCheck(kingColor)) {
                 return false; // King can move to a safe square
             }
@@ -580,7 +622,7 @@ bool Board::isKingInCheckmate(Color kingColor) {
         uint64_t start_bit = friendlyPiecesExceptKing & -friendlyPiecesExceptKing;
         Board tempBoard = *this;
         // The applyMove function should handle the capture
-        if (tempBoard.applyMove(static_cast<Square>(start_bit), static_cast<Square>(checker_square))) {
+        if (tempBoard.applyMove({static_cast<Square>(start_bit), static_cast<Square>(checker_square)})) {
             if (!tempBoard.isKingInCheck(kingColor)) {
                 return false; // Found a legal capture
             }
@@ -624,7 +666,7 @@ bool Board::isKingInCheckmate(Color kingColor) {
             while(end_squares) {
                 uint64_t end_bit = end_squares & -end_squares;
                 Board tempBoard = *this;
-                if (tempBoard.applyMove(static_cast<Square>(start_bit), static_cast<Square>(end_bit))) {
+                if (tempBoard.applyMove({static_cast<Square>(start_bit), static_cast<Square>(end_bit)})) {
                     if (!tempBoard.isKingInCheck(kingColor)) {
                         return false; // Found a legal block
                     }
@@ -697,8 +739,16 @@ std::vector<Move> Board::generatePawnMoves() {
         if (sideToMove == Color::WHITE) {
             // Single push
             uint64_t end_bit = start_bit << 8;
+            bool isWhitePromoting = (end_bit & 0xFF00000000000000ULL) != 0;
             if (!(allPieces & end_bit)) {
-                moves.push_back({start, static_cast<Square>(end_bit)});
+                if (isWhitePromoting) {
+                    moves.push_back({start, static_cast<Square>(end_bit)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::BISHOP});
+                }
             }
                 
             // Double push
@@ -710,12 +760,26 @@ std::vector<Move> Board::generatePawnMoves() {
             // Captures
             uint64_t capture1 = (start_bit << 7) & ~file_masks[7];
             if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture1) {
-                moves.push_back({start, static_cast<Square>(capture1)});
+                if (isWhitePromoting) {
+                    moves.push_back({start, static_cast<Square>(capture1)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::BISHOP});
+                }
             }
                 
             uint64_t capture2 = (start_bit << 9) & ~file_masks[0];
             if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture2) {
-                 moves.push_back({start, static_cast<Square>(capture2)});
+                if (isWhitePromoting) {
+                    moves.push_back({start, static_cast<Square>(capture2)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::BISHOP});
+                }
             }
                
             // En Passant
@@ -725,8 +789,16 @@ std::vector<Move> Board::generatePawnMoves() {
         } else { // Black
             // Single push
             uint64_t end_bit = start_bit >> 8;
+            bool isBlackPromoting = (end_bit & 0x00000000000000FFULL) != 0;
             if (!(allPieces & end_bit)) {
-                moves.push_back({start, static_cast<Square>(end_bit)});
+                if (isBlackPromoting) {
+                    moves.push_back({start, static_cast<Square>(end_bit)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(end_bit), PieceType::BISHOP});
+                }
             }
             // Double push
             end_bit = start_bit >> 16;
@@ -737,11 +809,25 @@ std::vector<Move> Board::generatePawnMoves() {
             // Captures
             uint64_t capture1 = (start_bit >> 7) & ~file_masks[0];
             if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture1) {
-                moves.push_back({start, static_cast<Square>(capture1)});
+                if (isBlackPromoting) {
+                    moves.push_back({start, static_cast<Square>(capture1)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(capture1), PieceType::BISHOP});
+                }
             }
             uint64_t capture2 = (start_bit >> 9) & ~file_masks[7];
             if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2) {
-                moves.push_back({start, static_cast<Square>(capture2)});
+                if (isBlackPromoting) {
+                    moves.push_back({start, static_cast<Square>(capture1)});
+                } else {
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::QUEEN});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::KNIGHT});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::ROOK});
+                    moves.push_back({start, static_cast<Square>(capture2), PieceType::BISHOP});
+                }
             }
                 
             // En Passant
@@ -884,7 +970,7 @@ std::vector<Move> Board::generateLegalMoves() {
 bool Board::isMoveLegal(Move move) {
      Board tempBoard = *this;
 
-    if (!tempBoard.applyMove(move.start, move.end)) {
+    if (!tempBoard.applyMove(move)) {
         return false;
     }
 

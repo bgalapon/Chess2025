@@ -10,7 +10,7 @@ TEST_CASE("Board::move", "[move]") {
     auto board = StandardBoard();
 
     SECTION("Pawn Double Step is a legal move") {
-        REQUIRE(board->move(Square::E2, Square::E4));
+        REQUIRE(board->makeMove({Square::E2, Square::E4}));
         REQUIRE(board->getSideToMove() == Color::BLACK);
         REQUIRE(board->getWhitePawns() == 0x000000001000EF00ULL);
         // The en passant square should be set to the square behind the pawn's destination.
@@ -18,18 +18,18 @@ TEST_CASE("Board::move", "[move]") {
     }
 
     SECTION("Illegal pawn move is not allowed") {
-        REQUIRE_FALSE(board->move(Square::E2, Square::E5));
+        REQUIRE_FALSE(board->makeMove({Square::E2, Square::E5}));
         REQUIRE(board->getSideToMove() == Color::WHITE);
     }
 
     SECTION("Knight move is a legal move") {
-        REQUIRE(board->move(Square::B1, Square::C3));
+        REQUIRE(board->makeMove({Square::B1, Square::C3}));
         REQUIRE(board->getSideToMove() == Color::BLACK);
         REQUIRE(board->getWhiteKnights() == (static_cast<uint64_t>(Square::C3) | static_cast<uint64_t>(Square::G1)));
     }
     
     SECTION("Move by the wrong side is not allowed") {
-        REQUIRE_FALSE(board->move(Square::E7, Square::E5));
+        REQUIRE_FALSE(board->makeMove({Square::E7, Square::E5}));
         REQUIRE(board->getSideToMove() == Color::WHITE);
     }
 
@@ -39,7 +39,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackPawns(static_cast<uint64_t>(Square::D5))
             .Build();
         
-        REQUIRE(customBoard->move(Square::E4, Square::D5));
+        REQUIRE(customBoard->makeMove({Square::E4, Square::D5}));
         REQUIRE(customBoard->getSideToMove() == Color::BLACK);
         REQUIRE(customBoard->getWhitePawns() == static_cast<uint64_t>(Square::D5));
         REQUIRE(customBoard->getBlackPawns() == 0ULL);
@@ -52,7 +52,7 @@ TEST_CASE("Board::move", "[move]") {
             .setEnPassent(static_cast<uint64_t>(Square::E3))
             .Build();
             
-        REQUIRE(customBoard->move(Square::D4, Square::E3));
+        REQUIRE(customBoard->makeMove({Square::D4, Square::E3}));
         REQUIRE(customBoard->getSideToMove() == Color::WHITE);
         REQUIRE(customBoard->getBlackPawns() == static_cast<uint64_t>(Square::E3));
         REQUIRE(customBoard->getWhitePawns() == 0ULL);
@@ -64,7 +64,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleKingside(true)
             .Build();
 
-        REQUIRE(customBoard->move(Square::E1, Square::G1));
+        REQUIRE(customBoard->makeMove({Square::E1, Square::G1}));
         REQUIRE(customBoard->getWhiteKing() == static_cast<uint64_t>(Square::G1));
         REQUIRE(customBoard->getWhiteRooks() == static_cast<uint64_t>(Square::F1));
     }
@@ -76,7 +76,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleKingside(true)
             .Build();
 
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::G1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::G1}));
     }
 
     SECTION("White castling kingside is not allowed if king is in check") {
@@ -86,7 +86,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleKingside(true)
             .Build();
 
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::G1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::G1}));
     }
 
     SECTION("White castling kingside is not allowed if king goes into check") {
@@ -96,7 +96,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleKingside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::G1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::G1}));
     }
 
     SECTION("White castling queenside is allowed") {
@@ -105,7 +105,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
     
-        REQUIRE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("White castling queenside is not allowed if king goes into check") {
@@ -115,7 +115,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
     
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("White castling queenside is not allowed if king goes through check with rook") {
@@ -125,7 +125,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("White castling queenside is not allowed if king goes through check with pawn") {
@@ -135,7 +135,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("White castling queenside is allowed if no squares in path are attacked") {
@@ -146,7 +146,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
 
-        REQUIRE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("White castling queenside is not allowed if no rook exists on A1") {
@@ -157,7 +157,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteCastleQueenside(true)
             .Build();
 
-        REQUIRE_FALSE(customBoard->move(Square::E1, Square::C1));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E1, Square::C1}));
     }
 
     SECTION("Illegal move that leaves the king in check is not allowed") {
@@ -166,7 +166,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackRooks(static_cast<uint64_t>(Square::H1))
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E2, Square::E4));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E2, Square::E4}));
     }
 
     SECTION("Sliding piece cannot jump over another piece") {
@@ -175,7 +175,7 @@ TEST_CASE("Board::move", "[move]") {
             .setWhiteKnights(static_cast<uint64_t>(Square::A2))
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::A1, Square::A3));
+        REQUIRE_FALSE(customBoard->makeMove({Square::A1, Square::A3}));
     }
 
     SECTION("Black castling kingside is a legal move") {
@@ -184,7 +184,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleKingside(true)
             .Build();
 
-        REQUIRE(customBoard->move(Square::E8, Square::G8));
+        REQUIRE(customBoard->makeMove({Square::E8, Square::G8}));
         REQUIRE(customBoard->getBlackKing() == static_cast<uint64_t>(Square::G8));
         REQUIRE(customBoard->getBlackRooks() == static_cast<uint64_t>(Square::F8));
     }
@@ -196,7 +196,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleKingside(true)
             .Build();
 
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::G8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::G8}));
     }
 
     SECTION("Black castling kingside is not allowed if king is in check") {
@@ -206,7 +206,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleKingside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::G8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::G8}));
     }
 
     SECTION("Black castling kingside is not allowed if king goes into check") {
@@ -216,7 +216,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleKingside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::G8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::G8}));
     }
 
     SECTION("Black castling queenside is allowed") {
@@ -225,7 +225,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleQueenside(true)
             .Build();
     
-        REQUIRE(customBoard->move(Square::E8, Square::C8));
+        REQUIRE(customBoard->makeMove({Square::E8, Square::C8}));
     }
 
     SECTION("Black castling queenside is not allowed if king goes into check") {
@@ -235,7 +235,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleQueenside(true)
             .Build();
 
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::C8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::C8}));
     }
 
     SECTION("Black castling queenside is not allowed if king goes through check with rook") {
@@ -245,7 +245,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleQueenside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::C8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::C8}));
     }
 
     SECTION("Black castling queenside is not allowed if king goes through check with pawn") {
@@ -255,7 +255,7 @@ TEST_CASE("Board::move", "[move]") {
             .setBlackCastleQueenside(true)
             .Build();
         
-        REQUIRE_FALSE(customBoard->move(Square::E8, Square::C8));
+        REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::C8}));
     }
 }
 

@@ -18,8 +18,11 @@ bool RandomPlayer::makeMove(Board& board) {
     std::uniform_int_distribution<size_t> distribution(0, legalMoves.size() - 1);
     size_t random_index = distribution(generator);
     Move chosenMove = legalMoves[random_index];
-    std::cout << "Chosen move (" << toAlgebraicNotation(chosenMove.start) << ", " << toAlgebraicNotation(chosenMove.end) << ")" << std::endl;
+
+    std::string colorToMove = (board.getSideToMove() == Color::WHITE) ? "White" : "Black";
+
+    std::cout << colorToMove << " made move (" << toAlgebraicNotation(chosenMove.start) << ", " << toAlgebraicNotation(chosenMove.end) << ")" << std::endl;
 
     // 4. Apply the chosen move to the board.
-    return board.move(chosenMove.start, chosenMove.end);    
+    return board.makeMove({chosenMove.start, chosenMove.end});    
 }
