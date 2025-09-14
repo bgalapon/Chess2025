@@ -42,12 +42,16 @@ int main() {
 
         turns++;
         // if (turns == 3) {
-        //     // TODO bgalapon delete this after testing
         //     break;
         // }
 
         std::cout << "Board:" << std::endl;
         std::cout << board->toString() << std::endl;
+
+        if (board->isInsufficientMaterial()) {
+            std::cout << "Insufficient Material! Game is a draw." << std::endl;
+            break;
+        }
     }
 
     return 0;

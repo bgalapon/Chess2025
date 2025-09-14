@@ -427,6 +427,56 @@ void Board::setVerbose(bool verbose) {
     this->verbose = verbose;
 }
 
+bool Board::isInsufficientMaterial() {
+    int numWhiteKnights = std::popcount(whiteKnights);
+    int numWhiteRooks = std::popcount(whiteRooks);
+    int numWhiteQueens = std::popcount(whiteQueens);
+    int numWhitePawns = std::popcount(whitePawns);
+    int numWhiteBishops = std::popcount(whiteBishops);
+
+    int numBlackKnights = std::popcount(blackKnights);
+    int numBlackRooks = std::popcount(blackRooks);
+    int numBlackQueens = std::popcount(blackQueens);
+    int numBlackPawns = std::popcount(blackPawns);
+    int numBlackBishops = std::popcount(blackBishops);
+
+    int numWhitePieces = numWhiteKnights + numWhiteRooks + numWhiteQueens + numWhitePawns + numWhiteBishops;
+    int numBlackPieces = numBlackKnights + numBlackRooks + numBlackQueens + numBlackPawns + numBlackBishops;
+
+    // King vs King
+    if (numWhitePieces == 0 && numBlackPieces == 0) {
+        return true;
+    }
+
+    // King and one Knight vs King
+    if (numWhitePieces == 0 && numBlackPieces == 1 && numBlackKnights == 1) {
+        return true;
+    }
+    if (numBlackPieces == 0 && numWhitePieces == 1 && numWhiteKnights == 1) {
+        return true;
+    }
+
+    // King and one Bishop vs King
+    if (numWhitePieces == 0 && numBlackPieces == 1 && numBlackBishops == 1) {
+        return true;
+    }
+    if (numBlackPieces == 0 && numWhitePieces == 1 && numWhiteBishops == 1) {
+        return true;
+    }
+
+    if (numWhitePieces == 1 && numWhiteBishops == 1 && numBlackPieces == 1 && numBlackBishops == 1) {
+        if (getSquareIndex(whiteBishops) + getSquareIndex(blackBishops) % 2 == 0) {
+            return true;
+        }
+    }
+
+    // More complex scenarios (e.g., King & Bishop vs. King & Bishop on same color squares)
+    // could be added here for a more comprehensive check.
+    // For now, this is a sufficient start.
+
+    return false;
+}
+
 bool Board::move(Square start, Square end) {
     Board tempBoard = *this;
     if (!tempBoard.applyMove(start, end)) {

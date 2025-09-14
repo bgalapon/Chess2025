@@ -111,6 +111,7 @@ public:
     std::vector<Move> generatePseudoLegalMoves();
     bool isKingInCheckmate(Color kingColor);
     bool isKingInCheck(Color kingColor);
+    bool isInsufficientMaterial();
     void setVerbose(bool verbose);
 private:
     // Internal helper functions

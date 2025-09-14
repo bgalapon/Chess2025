@@ -9,6 +9,7 @@ cc_library(
     name = "board_lib",
     srcs = ["board.cpp"],
     hdrs = ["board.h"],
+    copts = ["-std=c++23"],
     visibility = ["//visibility:public"],
 )
 
@@ -16,6 +17,7 @@ cc_library(
     name = "player_lib",
     srcs = ["random_player.cpp"],
     hdrs = ["player.h"],
+    copts = ["-std=c++23"],
     deps = [
         ":board_lib",
     ],
@@ -27,6 +29,7 @@ cc_library(
 cc_test(
     name = "test_board",
     srcs = ["test_board.cpp"],
+    copts = ["-std=c++23"],
     deps = [
         ":board_lib",
         "@catch2//:catch2_main",
@@ -38,6 +41,7 @@ cc_test(
 cc_binary(
     name = "main",
     srcs = ["main.cpp"],
+    copts = ["-std=c++23"],
     deps = [
         ":board_lib",
         ":player_lib",
