@@ -53,6 +53,8 @@ inline uint64_t operator&(Square a, Square b) {
     return static_cast<uint64_t>(a) & static_cast<uint64_t>(b);
 }
 
+std::string pieceTypeToString(PieceType piece);
+
 class Board {
 public:
     Board();

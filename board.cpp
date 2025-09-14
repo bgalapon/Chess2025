@@ -741,7 +741,7 @@ std::vector<Move> Board::generatePawnMoves() {
             uint64_t end_bit = start_bit << 8;
             bool isWhitePromoting = (end_bit & 0xFF00000000000000ULL) != 0;
             if (!(allPieces & end_bit)) {
-                if (isWhitePromoting) {
+                if (!isWhitePromoting) {
                     moves.push_back({start, static_cast<Square>(end_bit)});
                 } else {
                     moves.push_back({start, static_cast<Square>(end_bit), PieceType::QUEEN});
@@ -760,7 +760,7 @@ std::vector<Move> Board::generatePawnMoves() {
             // Captures
             uint64_t capture1 = (start_bit << 7) & ~file_masks[7];
             if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture1) {
-                if (isWhitePromoting) {
+                if (!isWhitePromoting) {
                     moves.push_back({start, static_cast<Square>(capture1)});
                 } else {
                     moves.push_back({start, static_cast<Square>(capture1), PieceType::QUEEN});
@@ -772,7 +772,7 @@ std::vector<Move> Board::generatePawnMoves() {
                 
             uint64_t capture2 = (start_bit << 9) & ~file_masks[0];
             if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing) & capture2) {
-                if (isWhitePromoting) {
+                if (!isWhitePromoting) {
                     moves.push_back({start, static_cast<Square>(capture2)});
                 } else {
                     moves.push_back({start, static_cast<Square>(capture2), PieceType::QUEEN});
@@ -791,7 +791,7 @@ std::vector<Move> Board::generatePawnMoves() {
             uint64_t end_bit = start_bit >> 8;
             bool isBlackPromoting = (end_bit & 0x00000000000000FFULL) != 0;
             if (!(allPieces & end_bit)) {
-                if (isBlackPromoting) {
+                if (!isBlackPromoting) {
                     moves.push_back({start, static_cast<Square>(end_bit)});
                 } else {
                     moves.push_back({start, static_cast<Square>(end_bit), PieceType::QUEEN});
@@ -809,7 +809,7 @@ std::vector<Move> Board::generatePawnMoves() {
             // Captures
             uint64_t capture1 = (start_bit >> 7) & ~file_masks[0];
             if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture1) {
-                if (isBlackPromoting) {
+                if (!isBlackPromoting) {
                     moves.push_back({start, static_cast<Square>(capture1)});
                 } else {
                     moves.push_back({start, static_cast<Square>(capture1), PieceType::QUEEN});
@@ -820,7 +820,7 @@ std::vector<Move> Board::generatePawnMoves() {
             }
             uint64_t capture2 = (start_bit >> 9) & ~file_masks[7];
             if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2) {
-                if (isBlackPromoting) {
+                if (!isBlackPromoting) {
                     moves.push_back({start, static_cast<Square>(capture1)});
                 } else {
                     moves.push_back({start, static_cast<Square>(capture2), PieceType::QUEEN});
@@ -856,6 +856,17 @@ std::vector<Move> Board::generateKnightMoves() {
         knights &= knights - 1;
     }
     return moves;
+}
+
+// Helper function to convert a PieceType enum to a string for logging
+std::string pieceTypeToString(PieceType piece) {
+    switch (piece) {
+        case PieceType::QUEEN: return "Queen";
+        case PieceType::ROOK: return "Rook";
+        case PieceType::KNIGHT: return "Knight";
+        case PieceType::BISHOP: return "Bishop";
+    }
+    return ""; // Should not be reached
 }
 
 std::vector<Move> Board::generateBishopMoves() {

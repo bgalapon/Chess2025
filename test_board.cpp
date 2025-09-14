@@ -260,14 +260,6 @@ TEST_CASE("Board::move", "[move]") {
 }
 
 TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
-    SECTION("Scholar's Mate is a checkmate") {
-        // TODO
-    }
-
-    SECTION("Check but not checkmate") {
-        // TODO
-    }
-
     SECTION("Stalemate is not checkmate") {
         auto board = BoardBuilder(
             "....K..."
@@ -378,5 +370,62 @@ TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
             ".r.....K", Color::WHITE).Build();
         
         REQUIRE_FALSE(board->isKingInCheckmate(Color::WHITE));
+    }
+}
+
+TEST_CASE("Board::generateLegalMoves", "[generateLegalMoves]") {
+    SECTION("Standard board has 20 legal moves") {
+        std::unique_ptr<Board> board = StandardBoard();
+
+        for (const Move& move : board->generateLegalMoves()) {
+            std::cout << "legal move: " << toAlgebraicNotation(move.start) << " -> " << toAlgebraicNotation(move.end) << " to " << pieceTypeToString(move.promotionPiece) << std::endl; 
+        }
+
+        REQUIRE(board->generateLegalMoves().size() == 20);
+    }
+
+    SECTION("Pawn promotion and capture has 4 legal moves") {
+        auto board = BoardBuilder(
+            ".rr....."
+            ".P......"
+            "........"
+            "........"
+            "........"
+            ".k......"
+            "........"
+            ".......K", Color::WHITE).Build();
+        
+        // includes the 3 king moves.
+        REQUIRE(board->generateLegalMoves().size() == 7);
+    }
+
+    SECTION("Pawn promotion has 4 legal moves") {
+        auto board = BoardBuilder(
+            "........"
+            ".P......"
+            "........"
+            "........"
+            "........"
+            ".k......"
+            "........"
+            ".......K", Color::WHITE).Build();
+        
+        // includes the 3 king moves.
+        REQUIRE(board->generateLegalMoves().size() == 7);
+    }
+
+    SECTION("Pawn promotion and capture has 8 legal moves") {
+        auto board = BoardBuilder(
+            "..r....."
+            ".P......"
+            "........"
+            "........"
+            "........"
+            ".k......"
+            "........"
+            ".......K", Color::WHITE).Build();
+        
+        // includes the 3 king moves.
+        REQUIRE(board->generateLegalMoves().size() == 11);
     }
 }
