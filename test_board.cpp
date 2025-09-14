@@ -269,7 +269,17 @@ TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
     }
 
     SECTION("Stalemate is not checkmate") {
-        // TODO
+        auto board = BoardBuilder(
+            "....K..."
+            "........"
+            "...r.q.."
+            "........"
+            "........"
+            "........"
+            "........"
+            ".......k", Color::WHITE).Build();
+        
+        REQUIRE_FALSE(board->isKingInCheckmate(Color::WHITE));
     }
 
     SECTION("Checkmate 1") {
@@ -284,6 +294,34 @@ TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
             ".......K", Color::BLACK).Build();
         
         REQUIRE(board->isKingInCheckmate(Color::BLACK));
+    }
+
+    SECTION("Checkmate 2") {
+        auto board = BoardBuilder(
+            "....k..."
+            "........"
+            "........"
+            "........"
+            "........"
+            "........"
+            ".r......"
+            "r......K", Color::WHITE).Build();
+        
+        REQUIRE(board->isKingInCheckmate(Color::WHITE));
+    }
+
+    SECTION("Checkmate 3") {
+        auto board = BoardBuilder(
+            "....k..."
+            "........"
+            "........"
+            "........"
+            "....B..."
+            "...P...."
+            "r......."
+            ".r.....K", Color::WHITE).Build();
+        
+        REQUIRE(board->isKingInCheckmate(Color::WHITE));
     }
 
     SECTION("Not Checkmate 1") {
@@ -312,5 +350,33 @@ TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
             ".......K", Color::BLACK).Build();
         
         REQUIRE_FALSE(board->isKingInCheckmate(Color::BLACK));
+    }
+
+    SECTION("Not Checkmate 3") {
+        auto board = BoardBuilder(
+            "....K..."
+            "........"
+            "...r.q.."
+            "........"
+            "........"
+            "........"
+            "P......."
+            ".......k", Color::WHITE).Build();
+        
+        REQUIRE_FALSE(board->isKingInCheckmate(Color::WHITE));
+    }
+
+    SECTION("Not Checkmate 4") {
+        auto board = BoardBuilder(
+            "....k..."
+            "........"
+            "........"
+            "........"
+            "....B..."
+            "........"
+            "r......."
+            ".r.....K", Color::WHITE).Build();
+        
+        REQUIRE_FALSE(board->isKingInCheckmate(Color::WHITE));
     }
 }
