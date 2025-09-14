@@ -258,3 +258,59 @@ TEST_CASE("Board::move", "[move]") {
         REQUIRE_FALSE(customBoard->move(Square::E8, Square::C8));
     }
 }
+
+TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
+    SECTION("Scholar's Mate is a checkmate") {
+        // TODO
+    }
+
+    SECTION("Check but not checkmate") {
+        // TODO
+    }
+
+    SECTION("Stalemate is not checkmate") {
+        // TODO
+    }
+
+    SECTION("Checkmate 1") {
+        auto board = BoardBuilder(
+            "....k..."
+            "........"
+            "...RQQ.."
+            "........"
+            "........"
+            "........"
+            "........"
+            ".......K", Color::BLACK).Build();
+        
+        REQUIRE(board->isKingInCheckmate(Color::BLACK));
+    }
+
+    SECTION("Not Checkmate 1") {
+        auto board = BoardBuilder(
+            "....k..."
+            "........"
+            "........"
+            "........"
+            "B......."
+            ".....N.."
+            "........"
+            "b.....K.", Color::BLACK).Build();
+        
+        REQUIRE_FALSE(board->isKingInCheckmate(Color::BLACK));
+    }
+
+    SECTION("Not Checkmate 2") {
+        auto board = BoardBuilder(
+            "....k..."
+            "r......."
+            "...RQQ.."
+            "........"
+            "......."
+            "........"
+            "........"
+            ".......K", Color::BLACK).Build();
+        
+        REQUIRE_FALSE(board->isKingInCheckmate(Color::BLACK));
+    }
+}

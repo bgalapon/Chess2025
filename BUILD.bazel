@@ -25,8 +25,8 @@ cc_library(
 # A C++ test target that compiles and links the unit tests.
 # It depends on the board library and the external Catch2 library.
 cc_test(
-    name = "test_board_moves",
-    srcs = ["test_board_moves.cpp"],
+    name = "test_board",
+    srcs = ["test_board.cpp"],
     deps = [
         ":board_lib",
         "@catch2//:catch2_main",

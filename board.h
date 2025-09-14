@@ -152,6 +152,7 @@ private:
 class BoardBuilder {
 public:
     BoardBuilder(Square blackKingSquare, Square whiteKingSquare, Color sideToMove);
+    BoardBuilder(const std::string& boardString, Color sideToMove);
 
     BoardBuilder& setBlackBishops(uint64_t squares);
     BoardBuilder& setBlackKnights(uint64_t squares);
@@ -175,6 +176,8 @@ public:
     std::unique_ptr<Board> Build();
 
 private:
+    BoardBuilder& setWhiteKing(uint64_t square);
+    BoardBuilder& setBlackKing(uint64_t square);
     std::unique_ptr<Board> board;
 };
 

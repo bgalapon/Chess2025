@@ -191,8 +191,14 @@ bool Board::applyMove(Square start, Square end) {
         }
     }
 
-    if ((friendlyPieces & start_bit) == 0) return false;
-    if ((friendlyPieces & end_bit) != 0) return false;
+    if ((friendlyPieces & start_bit) == 0) {
+        std::cerr << "no friendly piece on start square:" << toAlgebraicNotation(static_cast<Square>(start_bit)) << std::endl;
+        return false;
+    }
+    if ((friendlyPieces & end_bit) != 0) {
+        std::cerr << "can't move onto friendly piece" << std::endl;
+        return false;
+    }
 
     uint8_t start_rank = getSquareIndex(start_bit) >> 3;
     uint8_t start_file = getSquareIndex(start_bit) & 7;
@@ -223,7 +229,10 @@ bool Board::applyMove(Square start, Square end) {
             }
             else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {}
             else if (end_bit == this->enPassent) { whitePawns &= ~(end_bit << 8); }
-            else { return false; }
+            else { 
+                std::cerr << "black invalid pawn move" << std::endl;
+                return false; 
+            }
             blackPawns &= ~start_bit;
             blackPawns |= end_bit;
         }
@@ -231,7 +240,10 @@ bool Board::applyMove(Square start, Square end) {
     else if ((whiteKnights & start_bit) || (blackKnights & start_bit)) {
         int rank_diff = std::abs(start_rank - end_rank);
         int file_diff = std::abs(start_file - end_file);
-        if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) return false;
+        if (!((rank_diff == 2 && file_diff == 1) || (rank_diff == 1 && file_diff == 2))) {
+            std::cerr << "white invalid knight move" << std::endl;
+            return false;
+        }
         if (whiteKnights & start_bit) { whiteKnights &= ~start_bit; whiteKnights |= end_bit; }
         else { blackKnights &= ~start_bit; blackKnights |= end_bit; }
     }
@@ -242,7 +254,10 @@ bool Board::applyMove(Square start, Square end) {
     }
     else if ((whiteRooks & start_bit) || (blackRooks & start_bit)) {
         bool isStraight = (start_rank == end_rank) || (start_file == end_file);
-        if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) return false;
+        if (!isStraight || !isPathClear(start_bit, end_bit, allPieces)) {
+            std::cerr << "black invalid knight move" << std::endl;
+            return false;
+        }
         if (whiteRooks & start_bit) { whiteRooks &= ~start_bit; whiteRooks |= end_bit; }
         else { blackRooks &= ~start_bit; blackRooks |= end_bit; }
     }
@@ -250,17 +265,24 @@ bool Board::applyMove(Square start, Square end) {
         bool isHorizontal = start_rank == end_rank;
         bool isVertical = start_file == end_file;
         bool isDiagonal = std::abs(start_rank - end_rank) == std::abs(start_file - end_file);
-        if ((!isHorizontal && !isVertical && !isDiagonal) || !isPathClear(start_bit, end_bit, allPieces)) return false;
+        if ((!isHorizontal && !isVertical && !isDiagonal) || !isPathClear(start_bit, end_bit, allPieces)) {
+            std::cerr << "invalid queen move" << std::endl;
+            return false;
+        }
         if (whiteQueens & start_bit) { whiteQueens &= ~start_bit; whiteQueens |= end_bit; }
         else { blackQueens &= ~start_bit; blackQueens |= end_bit; }
     }
     else if ((whiteKing & start_bit) || (blackKing & start_bit)) {
         int rank_diff = std::abs(start_rank - end_rank);
         int file_diff = std::abs(start_file - end_file);
-        if (rank_diff > 1 || file_diff > 1) return false;
+        if (rank_diff > 1 || file_diff > 1) {
+            std::cerr << "invalid king move" << std::endl;
+            return false;
+        }
         if (whiteKing & start_bit) { whiteKing &= ~start_bit; whiteKing |= end_bit; }
         else { blackKing &= ~start_bit; blackKing |= end_bit; }
     } else {
+        std::cerr << "invalid move, can't detect any piece" << std::endl;
         return false;
     }
 
@@ -425,6 +447,7 @@ bool Board::isKingInCheckmate(Color kingColor) {
     uint64_t kingSquare = (kingColor == Color::WHITE) ? whiteKing : blackKing;
 
     if (!isKingInCheck(kingColor)) {
+        // std::cout << "I'm not in check on: " << toAlgebraicNotation(static_cast<Square>(kingSquare)) << std::endl;
         return false;
     }
 
@@ -438,11 +461,13 @@ bool Board::isKingInCheckmate(Color kingColor) {
     
     while (kingLegalMoves) {
         uint64_t end_bit = kingLegalMoves & -kingLegalMoves;
+        // std::cout << "Considering king move: " << toAlgebraicNotation(static_cast<Square>(kingSquare)) << " -> " << toAlgebraicNotation(static_cast<Square>(end_bit)) << std::endl;
         Board tempBoard = *this;
         if (tempBoard.applyMove(static_cast<Square>(kingSquare), static_cast<Square>(end_bit))) {
             if (!tempBoard.isKingInCheck(kingColor)) {
                 return false; // King can move to a safe square
             }
+            // std::cout << "king is attacked on: " << toAlgebraicNotation(static_cast<Square>(end_bit)) << std::endl;
         }
         kingLegalMoves &= kingLegalMoves - 1;
     }
@@ -802,16 +827,77 @@ BoardBuilder::BoardBuilder(Square blackKingSquare, Square whiteKingSquare, Color
     board->setSideToMove(sideToMove);
 }
 
+BoardBuilder::BoardBuilder(const std::string& boardString, Color sideToMove) : board(std::make_unique<Board>()) {
+    if (boardString.length() != 64) {
+        // Handle invalid string length.
+        return;
+    }
+
+    uint64_t whitePawns = 0ULL;
+    uint64_t whiteKnights = 0ULL;
+    uint64_t whiteBishops = 0ULL;
+    uint64_t whiteRooks = 0ULL;
+    uint64_t whiteQueens = 0ULL;
+    uint64_t whiteKing = 0ULL;
+
+    uint64_t blackPawns = 0ULL;
+    uint64_t blackKnights = 0ULL;
+    uint64_t blackBishops = 0ULL;
+    uint64_t blackRooks = 0ULL;
+    uint64_t blackQueens = 0ULL;
+    uint64_t blackKing = 0ULL;
+
+    for (int i = 0; i < 64; ++i) {
+        // Convert string index to square index
+        int rank = i / 8;
+        int file = i % 8;
+        int square_index = (7 - rank) * 8 + file;
+        
+        switch (boardString[i]) {
+            case 'P': whitePawns |= (1ULL << square_index); break;
+            case 'N': whiteKnights |= (1ULL << square_index); break;
+            case 'B': whiteBishops |= (1ULL << square_index); break;
+            case 'R': whiteRooks |= (1ULL << square_index); break;
+            case 'Q': whiteQueens |= (1ULL << square_index); break;
+            case 'K': whiteKing |= (1ULL << square_index); break;
+            case 'p': blackPawns |= (1ULL << square_index); break;
+            case 'n': blackKnights |= (1ULL << square_index); break;
+            case 'b': blackBishops |= (1ULL << square_index); break;
+            case 'r': blackRooks |= (1ULL << square_index); break;
+            case 'q': blackQueens |= (1ULL << square_index); break;
+            case 'k': blackKing |= (1ULL << square_index); break;
+            case '.': break; // Empty square, do nothing
+            default: return; // Invalid character
+        }
+    }
+
+    board->setWhitePawns(whitePawns);
+    board->setWhiteKnights(whiteKnights);
+    board->setWhiteBishops(whiteBishops);
+    board->setWhiteRooks(whiteRooks);
+    board->setWhiteQueens(whiteQueens);
+    board->setWhiteKing(whiteKing);
+    board->setBlackPawns(blackPawns);
+    board->setBlackKnights(blackKnights);
+    board->setBlackBishops(blackBishops);
+    board->setBlackRooks(blackRooks);
+    board->setBlackQueens(blackQueens);
+    board->setBlackKing(blackKing);
+    board->setSideToMove(sideToMove);
+}
+
 BoardBuilder& BoardBuilder::setBlackBishops(uint64_t squares) { board->setBlackBishops(squares); return *this;}
 BoardBuilder& BoardBuilder::setBlackKnights(uint64_t squares) { board->setBlackKnights(squares); return *this;}
 BoardBuilder& BoardBuilder::setBlackPawns(uint64_t squares) { board->setBlackPawns(squares); return *this;}
 BoardBuilder& BoardBuilder::setBlackQueens(uint64_t squares) { board->setBlackQueens(squares); return *this;}
 BoardBuilder& BoardBuilder::setBlackRooks(uint64_t squares) { board->setBlackRooks(squares); return *this;}
+BoardBuilder& BoardBuilder::setBlackKing(uint64_t square) { board->setBlackKing(square); return *this;}
 BoardBuilder& BoardBuilder::setWhiteBishops(uint64_t squares) { board->setWhiteBishops(squares); return *this;}
 BoardBuilder& BoardBuilder::setWhiteKnights(uint64_t squares) { board->setWhiteKnights(squares); return *this;}
 BoardBuilder& BoardBuilder::setWhitePawns(uint64_t squares) { board->setWhitePawns(squares); return *this;}
 BoardBuilder& BoardBuilder::setWhiteQueens(uint64_t squares) { board->setWhiteQueens(squares); return *this;}
 BoardBuilder& BoardBuilder::setWhiteRooks(uint64_t squares) { board->setWhiteRooks(squares); return *this;}
+BoardBuilder& BoardBuilder::setWhiteKing(uint64_t square) { board->setWhiteKing(square); return *this;}
 BoardBuilder& BoardBuilder::setBlackCastleKingside(bool canCastle) { board->setBlackCastleKingside(canCastle); return *this; }
 BoardBuilder& BoardBuilder::setBlackCastleQueenside(bool canCastle) { board->setBlackCastleQueenside(canCastle); return *this; }
 BoardBuilder& BoardBuilder::setWhiteCastleKingside(bool canCastle) { board->setWhiteCastleKingside(canCastle); return *this; }
