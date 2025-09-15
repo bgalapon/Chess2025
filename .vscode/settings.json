@@ -56,7 +56,8 @@
         "list": "cpp",
         "map": "cpp",
         "regex": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "charconv": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

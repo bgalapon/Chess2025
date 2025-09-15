@@ -15,7 +15,7 @@ cc_library(
 
 cc_library(
     name = "player_lib",
-    srcs = ["random_player.cpp", "human_player.cpp"],
+    srcs = ["random_player.cpp", "human_player.cpp", "minmax_player.cpp"],
     hdrs = ["player.h"],
     copts = ["-std=c++23"],
     deps = [

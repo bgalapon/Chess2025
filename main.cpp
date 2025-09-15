@@ -10,7 +10,7 @@
 int main() {
     std::unique_ptr<Board> board = StandardBoard();
 
-    RandomPlayer whitePlayer;
+    MinMaxPlayer whitePlayer(6);
     RandomPlayer blackPlayer;
 
     std::cout << "Board:" << std::endl;
