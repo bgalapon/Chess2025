@@ -12,3 +12,9 @@ class RandomPlayer : public Player {
 public:
     bool makeMove(Board& board) override;
 };
+
+// HumanPlayer class that implements the Player interface
+class HumanPlayer : public Player {
+public:
+    bool makeMove(Board& board) override;
+};

@@ -24,5 +24,5 @@ bool RandomPlayer::makeMove(Board& board) {
     std::cout << colorToMove << " made move (" << toAlgebraicNotation(chosenMove.start) << ", " << toAlgebraicNotation(chosenMove.end) << ")" << std::endl;
 
     // 4. Apply the chosen move to the board.
-    return board.makeMove({chosenMove.start, chosenMove.end});    
+    return board.makeMove({chosenMove.start, chosenMove.end, chosenMove.promotionPiece});    
 }
