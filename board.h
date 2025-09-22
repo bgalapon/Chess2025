@@ -103,6 +103,18 @@ public:
     uint64_t getWhiteQueens();
     uint64_t getWhiteRooks();
 
+    int getNumBlackBishops();
+    int getNumBlackKnights();
+    int getNumBlackPawns();
+    int getNumBlackQueens();
+    int getNumBlackRooks();
+
+    int getNumWhiteBishops();
+    int getNumWhiteKnights();
+    int getNumWhitePawns();
+    int getNumWhiteQueens();
+    int getNumWhiteRooks();
+
     bool getBlackCastleKingside();
     bool getBlackCastleQueenside();
     bool getWhiteCastleKingside();
@@ -119,6 +131,7 @@ public:
     bool isKingInCheck(Color kingColor);
     bool isInsufficientMaterial();
     void setVerbose(bool verbose);
+    bool isCaptureMove(const Move& move);
 private:
     // Internal helper functions
     bool applyMove(Move move);

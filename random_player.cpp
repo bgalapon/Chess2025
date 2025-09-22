@@ -20,7 +20,6 @@ bool RandomPlayer::makeMove(Board& board) {
     Move chosenMove = legalMoves[random_index];
 
     std::string colorToMove = (board.getSideToMove() == Color::WHITE) ? "White" : "Black";
-
     std::cout << colorToMove << " made move (" << toAlgebraicNotation(chosenMove.start) << ", " << toAlgebraicNotation(chosenMove.end) << ")" << std::endl;
 
     // 4. Apply the chosen move to the board.

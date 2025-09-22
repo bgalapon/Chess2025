@@ -1,0 +1,49 @@
+exec ${PAGER:-/usr/bin/less} "$0" || exit 1
+Executing tests from //:test_minmax_player
+-----------------------------------------------------------------------------
+Warning: Bazel shard configuration is missing 'TEST_SHARD_INDEX'. Shard configuration is skipped.
+Warning: Bazel shard configuration is missing 'TEST_TOTAL_SHARDS'. Shard configuration is skipped.
+Warning: Bazel shard configuration is missing 'TEST_SHARD_STATUS_FILE'. Shard configuration is skipped.
+Randomness seeded to: 2405037574
+score of move: D4 -> E5 is 100
+score of move: A2 -> A3 is 100
+score of move: A2 -> A4 is 0
+score of move: B2 -> B3 is 0
+score of move: B2 -> B4 is 0
+score of move: C2 -> C3 is 100
+score of move: C2 -> C4 is 0
+score of move: E2 -> E3 is 0
+score of move: E2 -> E4 is 100
+score of move: F2 -> F3 is 0
+score of move: F2 -> F4 is 0
+score of move: G2 -> G3 is 0
+score of move: G2 -> G4 is 0
+score of move: H2 -> H3 is 0
+score of move: H2 -> H4 is 0
+score of move: D4 -> D5 is 0
+score of move: B1 -> D2 is 100
+score of move: B1 -> A3 is 0
+score of move: B1 -> C3 is 100
+score of move: G1 -> F3 is 0
+score of move: G1 -> H3 is 0
+score of move: C1 -> D2 is 0
+score of move: C1 -> E3 is 0
+score of move: C1 -> F4 is -230
+score of move: C1 -> G5 is -230
+score of move: C1 -> H6 is -230
+score of move: D1 -> D2 is 100
+score of move: D1 -> D3 is 100
+score of move: E1 -> D2 is 0
+White made move (D4, E5)
+rnbqkbnr
+pppp.ppp
+........
+....P...
+........
+........
+PPP.PPPP
+RNBQKBNR
+
+===============================================================================
+All tests passed (2 assertions in 1 test case)
+

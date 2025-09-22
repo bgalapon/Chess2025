@@ -251,7 +251,10 @@ bool Board::applyMove(Move move) {
             else if ((end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) && (enemyPieces & end_bit)) {}
             else if (end_bit == this->enPassent) { whitePawns &= ~(end_bit << 8); }
             else {
-                if (verbose) std::cout << "black invalid pawn move" << std::endl;
+                if (verbose) std::cout << "black invalid pawn move " << toAlgebraicNotation(static_cast<Square>(start_bit)) << " moving to " <<  toAlgebraicNotation(static_cast<Square>(end_bit)) << std::endl;
+                // if (verbose) std::cout << this->toString() << std::endl;
+                // if (verbose) std::cout << (end_bit == (start_bit >> 7) || end_bit == (start_bit >> 9)) << std::endl;
+                // if (verbose) std::cout << (enemyPieces & end_bit) << std::endl;
                 return false; 
             }
             blackPawns &= ~start_bit;
@@ -472,18 +475,58 @@ void Board::setVerbose(bool verbose) {
     this->verbose = verbose;
 }
 
-bool Board::isInsufficientMaterial() {
-    int numWhiteKnights = std::popcount(whiteKnights);
-    int numWhiteRooks = std::popcount(whiteRooks);
-    int numWhiteQueens = std::popcount(whiteQueens);
-    int numWhitePawns = std::popcount(whitePawns);
-    int numWhiteBishops = std::popcount(whiteBishops);
+int Board::getNumWhiteKnights() {
+    return std::popcount(whiteKnights);
+}
 
-    int numBlackKnights = std::popcount(blackKnights);
-    int numBlackRooks = std::popcount(blackRooks);
-    int numBlackQueens = std::popcount(blackQueens);
-    int numBlackPawns = std::popcount(blackPawns);
-    int numBlackBishops = std::popcount(blackBishops);
+int Board::getNumWhiteRooks() {
+    return std::popcount(whiteRooks);
+}
+
+int Board::getNumWhiteQueens() {
+    return std::popcount(whiteQueens);
+}
+
+int Board::getNumWhitePawns() {
+    return std::popcount(whitePawns);
+}
+
+int Board::getNumWhiteBishops() {
+    return std::popcount(whiteBishops);
+}
+
+int Board::getNumBlackKnights() {
+    return std::popcount(blackKnights);
+}
+
+int Board::getNumBlackRooks() {
+    return std::popcount(blackRooks);
+}
+
+int Board::getNumBlackQueens() {
+    return std::popcount(blackQueens);
+}
+
+int Board::getNumBlackPawns() {
+    return std::popcount(blackPawns);
+}
+
+int Board::getNumBlackBishops() {
+    return std::popcount(blackBishops);
+}
+
+bool Board::isInsufficientMaterial() {
+    int numWhiteKnights = getNumWhiteKnights();
+    int numWhiteRooks = getNumWhiteRooks();
+    int numWhiteQueens = getNumWhiteQueens();
+    int numWhitePawns = getNumWhitePawns();
+    int numWhiteBishops = getNumWhiteBishops();
+
+    int numBlackKnights = getNumBlackKnights();
+    int numBlackRooks = getNumBlackRooks();
+    int numBlackQueens = getNumBlackQueens();
+    int numBlackPawns = getNumBlackPawns();
+    int numBlackBishops = getNumBlackBishops();
 
     int numWhitePieces = numWhiteKnights + numWhiteRooks + numWhiteQueens + numWhitePawns + numWhiteBishops;
     int numBlackPieces = numBlackKnights + numBlackRooks + numBlackQueens + numBlackPawns + numBlackBishops;
@@ -982,7 +1025,7 @@ std::vector<Move> Board::generateLegalMoves() {
 }
 
 bool Board::isMoveLegal(Move move) {
-     Board tempBoard = *this;
+    Board tempBoard = *this;
 
     if (!tempBoard.applyMove(move)) {
         return false;
@@ -994,6 +1037,23 @@ bool Board::isMoveLegal(Move move) {
     }
 
     return true;
+}
+
+bool Board::isCaptureMove(const Move& move) {
+    uint64_t start_bit = static_cast<uint64_t>(move.start);
+    uint64_t end_bit = static_cast<uint64_t>(move.end);
+
+    // Check for en passant capture
+    if ((start_bit & (whitePawns | blackPawns)) && (end_bit == enPassent)) {
+        return true;
+    }
+
+    // Check for a regular capture
+    if (sideToMove == Color::WHITE) {
+        return (end_bit & (blackPawns|blackRooks|blackBishops|blackQueens|blackKnights));
+    } else {
+        return (end_bit & (whitePawns|whiteRooks|whiteBishops|whiteQueens|whiteKnights));
+    }
 }
 
 // BoardBuilder class implementations
