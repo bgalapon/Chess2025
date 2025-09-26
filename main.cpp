@@ -11,7 +11,7 @@ int main() {
     std::unique_ptr<Board> board = StandardBoard();
 
     MinMaxPlayer whitePlayer(6);
-    RandomPlayer blackPlayer;
+    HumanPlayer blackPlayer;
 
     std::cout << "Board:" << std::endl;
     std::cout << board->toString() << std::endl;

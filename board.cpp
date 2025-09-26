@@ -580,6 +580,8 @@ bool Board::makeMove(Move move) {
         else this->sideToMove = Color::WHITE;
         return true;
     }
+
+    std::cout << "Error: Should not be here" << std::endl;
     return false;
 }
 
@@ -867,7 +869,7 @@ std::vector<Move> Board::generatePawnMoves() {
             uint64_t capture2 = (start_bit >> 9) & ~file_masks[7];
             if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing) & capture2) {
                 if (!isBlackPromoting) {
-                    moves.push_back({start, static_cast<Square>(capture1)});
+                    moves.push_back({start, static_cast<Square>(capture2)});
                 } else {
                     moves.push_back({start, static_cast<Square>(capture2), PieceType::QUEEN});
                     moves.push_back({start, static_cast<Square>(capture2), PieceType::KNIGHT});

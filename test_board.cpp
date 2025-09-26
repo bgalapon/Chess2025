@@ -257,6 +257,20 @@ TEST_CASE("Board::move", "[move]") {
         
         REQUIRE_FALSE(customBoard->makeMove({Square::E8, Square::C8}));
     }
+
+    SECTION("Black pawn capture is a legal move") {
+         auto customBoard = BoardBuilder(
+            "rnbqk.nr"
+            "p.pp.ppp"
+            ".p..p..."
+            "...N...."
+            ".b..P..."
+            ".....N.."
+            "PPPP.PPP"
+            "R.BQKB.R", Color::BLACK).Build();
+
+        REQUIRE(customBoard->makeMove({Square::E6, Square::D5}));
+    }
 }
 
 TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
@@ -376,10 +390,6 @@ TEST_CASE("Board::isKingInCheckmate", "[isKingInCheckmate]") {
 TEST_CASE("Board::generateLegalMoves", "[generateLegalMoves]") {
     SECTION("Standard board has 20 legal moves") {
         std::unique_ptr<Board> board = StandardBoard();
-
-        for (const Move& move : board->generateLegalMoves()) {
-            std::cout << "legal move: " << toAlgebraicNotation(move.start) << " -> " << toAlgebraicNotation(move.end) << " to " << pieceTypeToString(move.promotionPiece) << std::endl; 
-        }
 
         REQUIRE(board->generateLegalMoves().size() == 20);
     }
